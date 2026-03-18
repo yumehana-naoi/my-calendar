@@ -66,11 +66,63 @@ body {
 }
 .header-btn:hover { background: var(--bg); }
 
-/* ===== カレンダーコンテナ ===== */
-#calendar-container {
-  padding: 8px;
-  max-width: 1200px;
+/* ===== メインレイアウト ===== */
+#main-layout {
+  display: flex;
+  max-width: 1600px;
   margin: 0 auto;
+  transition: all 0.25s ease;
+}
+
+#calendar-container {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  transition: all 0.25s ease;
+}
+
+/* ===== 詳細パネル（サイドバー方式） ===== */
+#detail-panel {
+  width: 380px;
+  min-width: 380px;
+  background: white;
+  border-left: 1px solid var(--border);
+  box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 52px;
+  height: calc(100vh - 52px);
+  transition: all 0.25s ease;
+}
+
+#detail-panel.hidden {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-left: none;
+  box-shadow: none;
+}
+
+.panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border-bottom: 1px solid var(--border);
+  min-width: 380px;
+}
+
+.panel-header h2 { font-size: 1.1rem; white-space: nowrap; }
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 380px;
+}
+
+#detail-events-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+
+.panel-footer {
+  padding: 12px 16px 16px;
+  min-width: 380px;
 }
 
 /* ===== 月ヘッダー ===== */
@@ -147,6 +199,10 @@ body {
   box-shadow: 0 0 0 1px var(--today-border);
 }
 
+.day-cell.selected-day {
+  box-shadow: 0 0 0 2px var(--blue);
+}
+
 .day-number {
   font-size: 0.85rem; font-weight: 600;
   padding: 2px 4px; border-radius: 4px;
@@ -179,28 +235,7 @@ body {
 .day-event-item.color-1 { background: var(--blue-bg); border-left: 3px solid var(--blue); }
 .day-event-item.color-2 { background: var(--mint-bg); border-left: 3px solid var(--mint); }
 
-/* ===== 詳細パネル ===== */
-.panel {
-  position: fixed; right: 0; top: 0; bottom: 0;
-  width: 380px; max-width: 100vw;
-  background: white;
-  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
-  z-index: 200;
-  display: flex; flex-direction: column;
-  transition: transform 0.25s ease;
-}
-
-.panel.hidden { transform: translateX(100%); pointer-events: none; }
-
-.panel-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 16px; border-bottom: 1px solid var(--border);
-}
-
-.panel-header h2 { font-size: 1.1rem; }
-
-#detail-events-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
-
+/* ===== 詳細カード ===== */
 .detail-event-card {
   background: var(--bg); border-radius: var(--radius);
   padding: 12px; margin-bottom: 10px; cursor: pointer;
@@ -228,8 +263,6 @@ body {
 .detail-event-actions .edit-btn:hover { background: var(--blue-bg); }
 .detail-event-actions .delete-btn { color: #DC2626; border-color: #FCA5A5; }
 .detail-event-actions .delete-btn:hover { background: #FEF2F2; }
-
-#btn-add-event { margin: 12px 16px 16px; }
 
 /* ===== モーダル ===== */
 .modal {
@@ -270,6 +303,7 @@ body {
 .form-group input[type="text"],
 .form-group input[type="time"],
 .form-group input[type="date"],
+.form-group input[type="number"],
 .form-group textarea,
 .form-group select {
   width: 100%; padding: 8px 12px;
@@ -309,21 +343,82 @@ body {
   background: var(--blue); color: white; border-color: var(--blue);
 }
 
-/* ===== カスタム日付 ===== */
-.custom-date-input { display: flex; gap: 8px; margin-bottom: 8px; }
-.custom-date-input input { flex: 1; }
-
-.custom-dates-list { display: flex; flex-wrap: wrap; gap: 4px; }
-
-.custom-date-tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 8px; background: var(--bg); border-radius: 4px; font-size: 0.8rem;
+/* ===== 繰り返し間隔 ===== */
+.interval-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.interval-row span { font-size: 0.85rem; white-space: nowrap; }
+.interval-row select {
+  width: 70px; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; background: white;
 }
 
-.custom-date-tag button {
+/* ===== ミニカレンダー（カスタム日付選択） ===== */
+.mini-cal-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.mini-cal-nav span { font-weight: 600; font-size: 0.9rem; }
+.mini-cal-nav button {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: white; cursor: pointer; font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-cal-nav button:hover { background: var(--bg); }
+
+.mini-cal-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  text-align: center; font-size: 0.7rem; font-weight: 600;
+  color: var(--text-light); margin-bottom: 4px;
+}
+.mini-cal-weekdays span:first-child { color: var(--sunday); }
+.mini-cal-weekdays span:last-child { color: var(--saturday); }
+
+.mini-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.mini-cal-day {
+  padding: 6px 2px; text-align: center;
+  border-radius: 4px; cursor: pointer;
+  font-size: 0.8rem; border: 1px solid transparent;
+  transition: all 0.12s;
+}
+.mini-cal-day:hover { background: var(--bg); }
+.mini-cal-day.empty { cursor: default; }
+.mini-cal-day.empty:hover { background: transparent; }
+.mini-cal-day.checked {
+  background: var(--blue); color: white; font-weight: 700;
+}
+.mini-cal-day.sun { color: var(--sunday); }
+.mini-cal-day.sat { color: var(--saturday); }
+.mini-cal-day.checked.sun,
+.mini-cal-day.checked.sat { color: white; }
+
+.selected-dates-summary {
+  margin-top: 8px; padding: 8px;
+  background: var(--bg); border-radius: var(--radius);
+  font-size: 0.8rem; color: var(--text-light);
+  max-height: 80px; overflow-y: auto;
+}
+
+.selected-dates-chips {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+}
+
+.date-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; background: var(--blue-bg);
+  border-radius: 12px; font-size: 0.75rem; color: var(--text);
+}
+.date-chip button {
   background: none; border: none; cursor: pointer;
-  color: var(--text-light); font-size: 0.9rem; padding: 0; line-height: 1;
+  color: var(--text-light); font-size: 0.8rem; padding: 0; line-height: 1;
 }
+.date-chip button:hover { color: var(--sunday); }
 
 /* ===== ボタン ===== */
 .primary-btn {
@@ -387,13 +482,26 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   position: fixed; inset: 0; background: rgba(0,0,0,0.3);
   z-index: 190; display: none;
 }
-@media (max-width: 768px) {
-  #panel-overlay.active { display: block; }
-}
 
 /* ===== レスポンシブ ===== */
 @media (max-width: 768px) {
-  .panel { width: 100%; }
+  #main-layout { display: block; }
+
+  #detail-panel {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: 100%; min-width: unset;
+    z-index: 200;
+    transition: transform 0.25s ease;
+  }
+  #detail-panel.hidden {
+    transform: translateX(100%);
+    width: 100%; min-width: unset;
+    overflow: hidden; border-left: none; box-shadow: none;
+  }
+  .panel-header, .panel-body, .panel-footer { min-width: unset; }
+
+  #panel-overlay.active { display: block; }
+
   .day-cell { min-height: 60px; padding: 2px; }
   .day-number { font-size: 0.75rem; }
   .day-event-item { font-size: 0.55rem; padding: 1px 3px; }
@@ -430,18 +538,28 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </header>
 
-<!-- カレンダーコンテナ -->
-<div id="calendar-container"></div>
+<!-- メインレイアウト: カレンダー + 詳細パネル 横並び -->
+<div id="main-layout">
+  <!-- カレンダーコンテナ -->
+  <div id="calendar-container"></div>
 
-<!-- 日付詳細パネル -->
-<div id="detail-panel" class="panel hidden">
-  <div class="panel-header">
-    <h2 id="detail-date-title"></h2>
-    <button id="btn-close-detail" class="close-btn">✕</button>
+  <!-- 日付詳細パネル（サイドバー） -->
+  <div id="detail-panel" class="hidden">
+    <div class="panel-header">
+      <h2 id="detail-date-title"></h2>
+      <button id="btn-close-detail" class="close-btn">✕</button>
+    </div>
+    <div class="panel-body">
+      <div id="detail-events-list"></div>
+    </div>
+    <div class="panel-footer">
+      <button id="btn-add-event" class="primary-btn">＋ 予定を追加</button>
+    </div>
   </div>
-  <div id="detail-events-list"></div>
-  <button id="btn-add-event" class="primary-btn">＋ 予定を追加</button>
 </div>
+
+<!-- パネルオーバーレイ（モバイル用） -->
+<div id="panel-overlay"></div>
 
 <!-- 予定追加/編集モーダル -->
 <div id="event-modal" class="modal hidden">
@@ -477,24 +595,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <label>繰り返し</label>
         <select id="recurrence-type">
           <option value="none">なし</option>
-          <option value="weekly">毎週</option>
-          <option value="biweekly">2週間ごと</option>
+          <option value="weekly">N週間ごと</option>
           <option value="nth-weekday">第N曜日</option>
-          <option value="custom">カスタム（複数日選択）</option>
+          <option value="custom">カスタム（カレンダーから複数日選択）</option>
         </select>
       </div>
 
-      <!-- 毎週/2週間ごと設定 -->
+      <!-- N週間ごと設定 -->
       <div id="weekly-options" class="recurrence-options hidden">
-        <label>曜日を選択</label>
-        <div class="weekday-selector">
-          <button type="button" class="weekday-btn" data-day="0">日</button>
-          <button type="button" class="weekday-btn" data-day="1">月</button>
-          <button type="button" class="weekday-btn" data-day="2">火</button>
-          <button type="button" class="weekday-btn" data-day="3">水</button>
-          <button type="button" class="weekday-btn" data-day="4">木</button>
-          <button type="button" class="weekday-btn" data-day="5">金</button>
-          <button type="button" class="weekday-btn" data-day="6">土</button>
+        <div class="interval-row">
+          <span>繰り返し間隔:</span>
+          <select id="week-interval">
+            <option value="1">毎週</option>
+            <option value="2">2週間ごと</option>
+            <option value="3">3週間ごと</option>
+            <option value="4">4週間ごと</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>曜日を選択</label>
+          <div class="weekday-selector">
+            <button type="button" class="weekday-btn" data-day="0">日</button>
+            <button type="button" class="weekday-btn" data-day="1">月</button>
+            <button type="button" class="weekday-btn" data-day="2">火</button>
+            <button type="button" class="weekday-btn" data-day="3">水</button>
+            <button type="button" class="weekday-btn" data-day="4">木</button>
+            <button type="button" class="weekday-btn" data-day="5">金</button>
+            <button type="button" class="weekday-btn" data-day="6">土</button>
+          </div>
         </div>
         <div class="form-group">
           <label>終了日</label>
@@ -532,14 +660,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </div>
       </div>
 
-      <!-- カスタム日付選択 -->
+      <!-- カスタム日付選択（ミニカレンダー） -->
       <div id="custom-options" class="recurrence-options hidden">
-        <label>日付を追加</label>
-        <div class="custom-date-input">
-          <input type="date" id="custom-date-add">
-          <button type="button" id="btn-add-custom-date" class="small-btn">追加</button>
+        <label style="margin-bottom:8px;display:block">カレンダーから日付をタップして選択</label>
+        <div class="mini-cal-nav">
+          <button type="button" id="mini-cal-prev">◀</button>
+          <span id="mini-cal-title"></span>
+          <button type="button" id="mini-cal-next">▶</button>
         </div>
-        <div id="custom-dates-list" class="custom-dates-list"></div>
+        <div class="mini-cal-weekdays">
+          <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+        </div>
+        <div id="mini-cal-grid" class="mini-cal-grid"></div>
+        <div id="selected-dates-summary" class="selected-dates-summary" style="display:none">
+          <strong>選択中: <span id="selected-count">0</span>日</strong>
+          <div id="selected-dates-chips" class="selected-dates-chips"></div>
+        </div>
       </div>
 
       <div class="form-actions">
@@ -608,14 +744,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
   const STORAGE_KEY = 'calendar_events';
   const SYNC_CONFIG_KEY = 'calendar_sync_config';
+  const LAST_MODIFIED_KEY = 'calendar_last_modified';
 
   let events = {};
   let selectedDate = null;
   let editingEvent = null;
   let baseMonth = new Date();
   let customDates = [];
+  let miniCalMonth = new Date();
   let firebaseDb = null;
   let firebaseUnsubscribe = null;
+  let isSyncingFromFirebase = false; // Firebase受信中フラグ（ループ防止）
+  let initialLoadDone = false; // 初回読み込み完了フラグ
 
   // ===== 日本の祝日計算 =====
   function getJapaneseHolidays(year) {
@@ -701,11 +841,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
   }
 
+  function formatDateShort(dateKey) {
+    const d = new Date(dateKey + 'T00:00:00');
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  }
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
+
+  function getNow() { return new Date().toISOString(); }
 
   // ===== ストレージ =====
   function loadEvents() {
@@ -716,8 +863,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   function saveEvents() {
+    const now = getNow();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-    syncToFirebase();
+    localStorage.setItem(LAST_MODIFIED_KEY, now);
+    if (!isSyncingFromFirebase) {
+      syncToFirebase(now);
+    }
   }
 
   function addEvent(dateKey, event) {
@@ -751,7 +902,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     return (events[dateKey] || []).slice().sort((a,b) => a.time.localeCompare(b.time));
   }
 
-  // ===== Firebase同期 =====
+  // ===== Firebase同期（修正版） =====
   function loadSyncConfig() {
     try { return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY)); }
     catch { return null; }
@@ -770,28 +921,73 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
       firebaseDb = firebase.firestore();
       if (firebaseUnsubscribe) firebaseUnsubscribe();
+      initialLoadDone = false;
+
       firebaseUnsubscribe = firebaseDb.collection('calendars').doc(config.userId)
         .onSnapshot((doc) => {
           if (doc.exists) {
-            events = doc.data().events || {};
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-            renderAllMonths();
-            if (selectedDate) renderDetailPanel(selectedDate);
+            const remoteData = doc.data();
+            const remoteUpdatedAt = remoteData.updatedAt || '';
+            const localUpdatedAt = localStorage.getItem(LAST_MODIFIED_KEY) || '';
+
+            if (!initialLoadDone) {
+              // 初回読み込み: Firebaseのデータをローカルにマージ
+              initialLoadDone = true;
+              const remoteEvents = remoteData.events || {};
+              mergeEvents(remoteEvents);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+              if (remoteUpdatedAt > localUpdatedAt) {
+                localStorage.setItem(LAST_MODIFIED_KEY, remoteUpdatedAt);
+              }
+              renderAllMonths();
+              if (selectedDate) renderDetailPanel(selectedDate);
+              // マージ結果をFirebaseに書き戻す
+              syncToFirebase(getNow());
+            } else {
+              // 2回目以降: 他デバイスからの変更を受信
+              isSyncingFromFirebase = true;
+              events = remoteData.events || {};
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+              localStorage.setItem(LAST_MODIFIED_KEY, remoteUpdatedAt);
+              renderAllMonths();
+              if (selectedDate) renderDetailPanel(selectedDate);
+              isSyncingFromFirebase = false;
+            }
+          } else {
+            // Firebaseにデータがない場合、ローカルデータをアップロード
+            initialLoadDone = true;
+            syncToFirebase(getNow());
           }
         });
       updateSyncStatus('connected', '接続中 ✓');
-      syncToFirebase();
     } catch (err) {
       console.error('Firebase init error:', err);
       updateSyncStatus('error', 'エラー: ' + err.message);
     }
   }
 
-  function syncToFirebase() {
+  // イベントをマージ（ローカルとリモートの両方を保持）
+  function mergeEvents(remoteEvents) {
+    for (const dateKey of Object.keys(remoteEvents)) {
+      if (!events[dateKey]) {
+        events[dateKey] = remoteEvents[dateKey];
+      } else {
+        const localIds = new Set(events[dateKey].map(e => e.id));
+        for (const remoteEv of remoteEvents[dateKey]) {
+          if (!localIds.has(remoteEv.id)) {
+            events[dateKey].push(remoteEv);
+          }
+        }
+      }
+    }
+    // ローカルにあるキーはそのまま保持される
+  }
+
+  function syncToFirebase(timestamp) {
     const config = loadSyncConfig();
     if (!firebaseDb || !config?.userId) return;
     firebaseDb.collection('calendars').doc(config.userId).set(
-      { events, updatedAt: new Date().toISOString() }, { merge: true }
+      { events, updatedAt: timestamp || getNow() }, { merge: true }
     ).catch(err => console.error('Sync error:', err));
   }
 
@@ -869,6 +1065,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if (dow === 6) cell.classList.add('saturday');
       if (holidayName) cell.classList.add('holiday');
       if (isToday(dateKey)) cell.classList.add('today');
+      if (selectedDate === dateKey) cell.classList.add('selected-day');
 
       const numEl = document.createElement('div');
       numEl.className = 'day-number';
@@ -913,21 +1110,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     baseMonth = new Date(); renderAllMonths();
   });
 
-  // ===== 詳細パネル =====
+  // ===== 詳細パネル（カレンダー横に表示） =====
   function openDetailPanel(dateKey) {
     selectedDate = dateKey;
     renderDetailPanel(dateKey);
     const panel = document.getElementById('detail-panel');
     if (panel.classList.contains('hidden')) {
       panel.classList.remove('hidden');
-      showOverlay();
+      if (window.innerWidth <= 768) showOverlay();
     }
+    renderAllMonths(); // 選択日のハイライト更新
   }
 
   function closeDetailPanel() {
     document.getElementById('detail-panel').classList.add('hidden');
     selectedDate = null;
     hideOverlay();
+    renderAllMonths(); // 選択日のハイライト解除
   }
 
   function renderDetailPanel(dateKey) {
@@ -974,15 +1173,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-add-event').addEventListener('click', openAddModal);
 
   function showOverlay() {
-    let o = document.getElementById('panel-overlay');
-    if (!o) { o = document.createElement('div'); o.id = 'panel-overlay'; document.body.appendChild(o); o.addEventListener('click', closeDetailPanel); }
+    const o = document.getElementById('panel-overlay');
     o.classList.add('active');
   }
 
   function hideOverlay() {
     const o = document.getElementById('panel-overlay');
-    if (o) o.classList.remove('active');
+    o.classList.remove('active');
   }
+
+  document.getElementById('panel-overlay').addEventListener('click', closeDetailPanel);
 
   // ===== 予定モーダル =====
   function openAddModal() {
@@ -990,7 +1190,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('modal-title').textContent = '予定を追加';
     document.getElementById('event-form').reset();
     document.getElementById('event-time').value = '09:00';
-    customDates = []; renderCustomDates();
+    customDates = []; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI();
     document.getElementById('event-modal').classList.remove('hidden');
   }
@@ -1024,7 +1224,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function resetRecurrenceUI() {
     document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.weekday-btn, .nth-btn').forEach(b => b.classList.remove('active'));
-    customDates = []; renderCustomDates();
+    document.getElementById('week-interval').value = '1';
+    customDates = [];
+    renderSelectedDatesChips();
   }
 
   document.getElementById('color-picker').addEventListener('click', (e) => {
@@ -1037,39 +1239,115 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('recurrence-type').addEventListener('change', (e) => {
     const type = e.target.value;
     document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
-    if (type === 'weekly' || type === 'biweekly') document.getElementById('weekly-options').classList.remove('hidden');
+    if (type === 'weekly') document.getElementById('weekly-options').classList.remove('hidden');
     else if (type === 'nth-weekday') document.getElementById('nth-weekday-options').classList.remove('hidden');
-    else if (type === 'custom') document.getElementById('custom-options').classList.remove('hidden');
+    else if (type === 'custom') {
+      document.getElementById('custom-options').classList.remove('hidden');
+      miniCalMonth = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+      renderMiniCalendar();
+    }
   });
 
   document.querySelectorAll('.weekday-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
   document.querySelectorAll('.nth-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
 
-  document.getElementById('btn-add-custom-date').addEventListener('click', () => {
-    const input = document.getElementById('custom-date-add');
-    if (input.value && !customDates.includes(input.value)) {
-      customDates.push(input.value); customDates.sort(); renderCustomDates(); input.value = '';
-    }
-  });
+  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+  document.getElementById('btn-cancel-event').addEventListener('click', closeModal);
 
-  function renderCustomDates() {
-    const c = document.getElementById('custom-dates-list');
-    c.innerHTML = '';
-    customDates.forEach(d => {
-      const t = document.createElement('span');
-      t.className = 'custom-date-tag';
-      t.innerHTML = `${d} <button data-date="${d}">✕</button>`;
-      c.appendChild(t);
+  // ===== ミニカレンダー（カスタム日付選択） =====
+  function renderMiniCalendar() {
+    const year = miniCalMonth.getFullYear();
+    const month = miniCalMonth.getMonth();
+
+    document.getElementById('mini-cal-title').textContent = `${year}年 ${month + 1}月`;
+
+    const grid = document.getElementById('mini-cal-grid');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-cal-day empty';
+      grid.appendChild(cell);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateKey = dateToKey(date);
+      const dow = date.getDay();
+
+      const cell = document.createElement('div');
+      cell.className = 'mini-cal-day';
+      if (dow === 0) cell.classList.add('sun');
+      if (dow === 6) cell.classList.add('sat');
+      if (customDates.includes(dateKey)) cell.classList.add('checked');
+
+      cell.textContent = day;
+      cell.addEventListener('click', () => {
+        toggleCustomDate(dateKey);
+        cell.classList.toggle('checked');
+      });
+
+      grid.appendChild(cell);
+    }
+
+    renderSelectedDatesChips();
+  }
+
+  function toggleCustomDate(dateKey) {
+    const idx = customDates.indexOf(dateKey);
+    if (idx === -1) {
+      customDates.push(dateKey);
+      customDates.sort();
+    } else {
+      customDates.splice(idx, 1);
+    }
+    renderSelectedDatesChips();
+  }
+
+  function renderSelectedDatesChips() {
+    const summary = document.getElementById('selected-dates-summary');
+    const chips = document.getElementById('selected-dates-chips');
+    const count = document.getElementById('selected-count');
+
+    if (!summary || !chips || !count) return;
+
+    if (customDates.length === 0) {
+      summary.style.display = 'none';
+      return;
+    }
+
+    summary.style.display = 'block';
+    count.textContent = customDates.length;
+    chips.innerHTML = '';
+
+    customDates.forEach(dk => {
+      const chip = document.createElement('span');
+      chip.className = 'date-chip';
+      chip.innerHTML = `${formatDateShort(dk)} <button data-date="${dk}">✕</button>`;
+      chips.appendChild(chip);
     });
   }
 
-  document.getElementById('custom-dates-list').addEventListener('click', (e) => {
+  document.getElementById('selected-dates-chips')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
-    if (btn) { customDates = customDates.filter(d => d !== btn.dataset.date); renderCustomDates(); }
+    if (btn && btn.dataset.date) {
+      customDates = customDates.filter(d => d !== btn.dataset.date);
+      renderMiniCalendar();
+    }
   });
 
-  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-  document.getElementById('btn-cancel-event').addEventListener('click', closeModal);
+  document.getElementById('mini-cal-prev').addEventListener('click', () => {
+    miniCalMonth.setMonth(miniCalMonth.getMonth() - 1);
+    renderMiniCalendar();
+  });
+
+  document.getElementById('mini-cal-next').addEventListener('click', () => {
+    miniCalMonth.setMonth(miniCalMonth.getMonth() + 1);
+    renderMiniCalendar();
+  });
 
   // ===== フォーム送信 =====
   document.getElementById('event-form').addEventListener('submit', (e) => {
@@ -1092,20 +1370,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
     } else {
       const dates = generateRecurringDates(recurrenceType, selectedDate);
-      const groupId = generateId();
-      dates.forEach(dk => addEvent(dk, { id: generateId(), groupId, time, title, detail, colorIndex }));
+      if (dates.length === 0) {
+        addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
+      } else {
+        const groupId = generateId();
+        dates.forEach(dk => addEvent(dk, { id: generateId(), groupId, time, title, detail, colorIndex }));
+      }
     }
 
     closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
-  // ===== 繰り返し日付生成 =====
+  // ===== 繰り返し日付生成（N週間ごと対応） =====
   function generateRecurringDates(type, startDateKey) {
     const dates = [];
     const startDate = new Date(startDateKey + 'T00:00:00');
 
-    if (type === 'weekly' || type === 'biweekly') {
-      const interval = type === 'biweekly' ? 2 : 1;
+    if (type === 'weekly') {
+      const interval = parseInt(document.getElementById('week-interval').value) || 1;
       const selectedDays = [];
       document.querySelectorAll('.weekday-btn.active').forEach(b => selectedDays.push(parseInt(b.dataset.day)));
       if (selectedDays.length === 0) selectedDays.push(startDate.getDay());
@@ -1115,7 +1397,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if (!endInput) endDate.setFullYear(endDate.getFullYear() + 1);
 
       let cur = new Date(startDate);
-      cur.setDate(cur.getDate() - cur.getDay());
+      cur.setDate(cur.getDate() - cur.getDay()); // 週の頭(日曜)に合わせる
 
       while (cur <= endDate) {
         for (const dow of selectedDays) {
@@ -1145,7 +1427,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
     } else if (type === 'custom') {
       if (customDates.length > 0) dates.push(...customDates);
-      if (!dates.includes(startDateKey)) dates.push(startDateKey);
+      if (dates.length === 0 && !dates.includes(startDateKey)) dates.push(startDateKey);
     }
 
     return [...new Set(dates)].sort();
@@ -1225,6 +1507,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-disconnect-sync').addEventListener('click', () => {
     if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
     firebaseDb = null;
+    initialLoadDone = false;
     localStorage.removeItem(SYNC_CONFIG_KEY);
     updateSyncStatus('', '切断しました');
   });
