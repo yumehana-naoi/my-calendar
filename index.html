@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>カレンダー</title>
+<style>
+/* ===== リセット & ベース ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --pink: #FF8FAB;
+  --blue: #89CFF0;
+  --mint: #A7F3D0;
+  --pink-bg: #FFF0F3;
+  --blue-bg: #EBF5FF;
+  --mint-bg: #ECFDF5;
+  --sunday: #E53E3E;
+  --saturday: #3B82F6;
+  --holiday: #E53E3E;
+  --today-border: #F59E0B;
+  --today-bg: #FFFBEB;
+  --bg: #F9FAFB;
+  --card-bg: #FFFFFF;
+  --text: #1F2937;
+  --text-light: #6B7280;
+  --border: #E5E7EB;
+  --radius: 8px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== ヘッダー ===== */
+#app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+#app-header h1 { font-size: 1.2rem; font-weight: 700; }
+.header-actions { display: flex; gap: 8px; }
+
+.header-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+.header-btn:hover { background: var(--bg); }
+
+/* ===== カレンダーコンテナ ===== */
+#calendar-container {
+  padding: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ===== 月ヘッダー ===== */
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 8px 8px;
+}
+
+.month-header h2 { font-size: 1.3rem; font-weight: 700; }
+.month-nav { display: flex; gap: 4px; }
+
+.month-nav button {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.month-nav button:hover { background: var(--bg); }
+
+/* ===== 曜日ヘッダー ===== */
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 0 4px;
+  position: sticky;
+  top: 52px;
+  background: var(--bg);
+  z-index: 10;
+}
+
+.weekday-header span { padding: 4px; }
+.weekday-header span:first-child { color: var(--sunday); }
+.weekday-header span:last-child { color: var(--saturday); }
+
+/* ===== カレンダーグリッド ===== */
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+/* ===== 日セル ===== */
+.day-cell {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 80px;
+  padding: 4px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-cell:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.day-cell.empty {
+  background: transparent; border: none; cursor: default; min-height: 0;
+}
+.day-cell.empty:hover { box-shadow: none; }
+
+.day-cell.today {
+  border: 3px solid var(--today-border);
+  background: var(--today-bg);
+  box-shadow: 0 0 0 1px var(--today-border);
+}
+
+.day-number {
+  font-size: 0.85rem; font-weight: 600;
+  padding: 2px 4px; border-radius: 4px;
+  display: inline-block; margin-bottom: 2px; line-height: 1;
+}
+
+.day-cell.sunday .day-number,
+.day-cell.holiday .day-number { color: var(--sunday); }
+.day-cell.saturday .day-number { color: var(--saturday); }
+.day-cell.today .day-number {
+  background: var(--today-border); color: white; padding: 3px 6px;
+}
+
+.holiday-name {
+  font-size: 0.55rem; color: var(--holiday);
+  line-height: 1.1; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===== 日内の予定表示 ===== */
+.day-events { flex: 1; overflow: visible; }
+
+.day-event-item {
+  font-size: 0.65rem; padding: 2px 4px; margin-bottom: 1px;
+  border-radius: 3px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+}
+
+.day-event-item.color-0 { background: var(--pink-bg); border-left: 3px solid var(--pink); }
+.day-event-item.color-1 { background: var(--blue-bg); border-left: 3px solid var(--blue); }
+.day-event-item.color-2 { background: var(--mint-bg); border-left: 3px solid var(--mint); }
+
+/* ===== 詳細パネル ===== */
+.panel {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 380px; max-width: 100vw;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  z-index: 200;
+  display: flex; flex-direction: column;
+  transition: transform 0.25s ease;
+}
+
+.panel.hidden { transform: translateX(100%); pointer-events: none; }
+
+.panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border-bottom: 1px solid var(--border);
+}
+
+.panel-header h2 { font-size: 1.1rem; }
+
+#detail-events-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+
+.detail-event-card {
+  background: var(--bg); border-radius: var(--radius);
+  padding: 12px; margin-bottom: 10px; cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.detail-event-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.detail-event-card.color-0 { border-left: 4px solid var(--pink); }
+.detail-event-card.color-1 { border-left: 4px solid var(--blue); }
+.detail-event-card.color-2 { border-left: 4px solid var(--mint); }
+
+.detail-event-time { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+.detail-event-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+.detail-event-detail { font-size: 0.8rem; color: var(--text-light); white-space: pre-wrap; }
+
+.detail-event-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+.detail-event-actions button {
+  padding: 4px 12px; border-radius: 4px;
+  border: 1px solid var(--border); background: white;
+  cursor: pointer; font-size: 0.75rem;
+}
+
+.detail-event-actions .edit-btn:hover { background: var(--blue-bg); }
+.detail-event-actions .delete-btn { color: #DC2626; border-color: #FCA5A5; }
+.detail-event-actions .delete-btn:hover { background: #FEF2F2; }
+
+#btn-add-event { margin: 12px 16px 16px; }
+
+/* ===== モーダル ===== */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+  background: white; border-radius: 12px;
+  width: 100%; max-width: 480px; max-height: 90vh;
+  overflow-y: auto; padding: 20px;
+}
+
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+
+.confirm-content { max-width: 360px; text-align: center; }
+.confirm-content h3 { margin-bottom: 12px; }
+.confirm-content p { margin-bottom: 16px; color: var(--text-light); font-size: 0.9rem; }
+
+/* ===== フォーム ===== */
+.form-group { margin-bottom: 14px; }
+
+.form-group label {
+  display: block; font-size: 0.8rem; font-weight: 600;
+  margin-bottom: 4px; color: var(--text-light);
+}
+
+.form-group input[type="text"],
+.form-group input[type="time"],
+.form-group input[type="date"],
+.form-group textarea,
+.form-group select {
+  width: 100%; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; font-family: inherit; background: white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none; border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(137,207,240,0.3);
+}
+
+/* ===== 色選択 ===== */
+.color-picker { display: flex; gap: 12px; }
+
+.color-option {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid transparent; cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.color-option:hover { transform: scale(1.1); }
+.color-option.selected { border-color: var(--text); transform: scale(1.15); }
+
+/* ===== 曜日セレクター ===== */
+.weekday-selector, .nth-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.weekday-btn, .nth-btn {
+  padding: 6px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: white;
+  cursor: pointer; font-size: 0.8rem; transition: all 0.15s;
+}
+
+.weekday-btn.active, .nth-btn.active {
+  background: var(--blue); color: white; border-color: var(--blue);
+}
+
+/* ===== カスタム日付 ===== */
+.custom-date-input { display: flex; gap: 8px; margin-bottom: 8px; }
+.custom-date-input input { flex: 1; }
+
+.custom-dates-list { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.custom-date-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px; background: var(--bg); border-radius: 4px; font-size: 0.8rem;
+}
+
+.custom-date-tag button {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-light); font-size: 0.9rem; padding: 0; line-height: 1;
+}
+
+/* ===== ボタン ===== */
+.primary-btn {
+  width: 100%; padding: 10px 20px;
+  background: var(--blue); color: white; border: none;
+  border-radius: var(--radius); font-size: 0.9rem;
+  font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+}
+.primary-btn:hover { opacity: 0.85; }
+
+.secondary-btn {
+  padding: 10px 20px; background: white; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; cursor: pointer;
+}
+.secondary-btn:hover { background: var(--bg); }
+
+.small-btn {
+  padding: 6px 12px; background: var(--blue); color: white;
+  border: none; border-radius: var(--radius); font-size: 0.8rem; cursor: pointer;
+}
+
+.close-btn {
+  width: 32px; height: 32px; border: none; background: none;
+  font-size: 1.2rem; cursor: pointer; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.close-btn:hover { background: var(--bg); }
+
+.form-actions { display: flex; gap: 8px; margin-top: 16px; }
+.form-actions .primary-btn { flex: 1; }
+.form-actions .secondary-btn { flex: 1; }
+
+/* ===== 繰り返しオプション ===== */
+.recurrence-options {
+  padding: 12px; background: var(--bg);
+  border-radius: var(--radius); margin-bottom: 14px;
+}
+.recurrence-options.hidden { display: none; }
+
+/* ===== 同期設定 ===== */
+.sync-body { padding: 0 4px; }
+
+.sync-description {
+  font-size: 0.85rem; color: var(--text-light);
+  margin-bottom: 12px; line-height: 1.5;
+}
+
+.sync-status {
+  margin-top: 8px; padding: 8px; border-radius: var(--radius);
+  font-size: 0.8rem; text-align: center;
+}
+
+.sync-status.connected { background: var(--mint-bg); color: #065F46; }
+.sync-status.error { background: #FEF2F2; color: #DC2626; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ===== パネルオーバーレイ (モバイルのみ) ===== */
+#panel-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  z-index: 190; display: none;
+}
+@media (max-width: 768px) {
+  #panel-overlay.active { display: block; }
+}
+
+/* ===== レスポンシブ ===== */
+@media (max-width: 768px) {
+  .panel { width: 100%; }
+  .day-cell { min-height: 60px; padding: 2px; }
+  .day-number { font-size: 0.75rem; }
+  .day-event-item { font-size: 0.55rem; padding: 1px 3px; }
+  .holiday-name { font-size: 0.5rem; }
+  .weekday-header { font-size: 0.7rem; }
+  .month-header h2 { font-size: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .day-cell { min-height: 48px; }
+  .day-event-item { font-size: 0.5rem; }
+}
+
+/* ===== アニメーション ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.month-block { animation: fadeIn 0.3s ease; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header id="app-header">
+  <h1>📅 カレンダー</h1>
+  <div class="header-actions">
+    <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
+    <button id="btn-today" class="header-btn" title="今日へ移動">今日</button>
+  </div>
+</header>
+
+<!-- カレンダーコンテナ -->
+<div id="calendar-container"></div>
+
+<!-- 日付詳細パネル -->
+<div id="detail-panel" class="panel hidden">
+  <div class="panel-header">
+    <h2 id="detail-date-title"></h2>
+    <button id="btn-close-detail" class="close-btn">✕</button>
+  </div>
+  <div id="detail-events-list"></div>
+  <button id="btn-add-event" class="primary-btn">＋ 予定を追加</button>
+</div>
+
+<!-- 予定追加/編集モーダル -->
+<div id="event-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-title">予定を追加</h3>
+      <button id="btn-close-modal" class="close-btn">✕</button>
+    </div>
+    <form id="event-form">
+      <div class="form-group">
+        <label>時間</label>
+        <input type="time" id="event-time" required>
+      </div>
+      <div class="form-group">
+        <label>表題</label>
+        <input type="text" id="event-title" required maxlength="50" placeholder="予定の表題">
+      </div>
+      <div class="form-group">
+        <label>詳細</label>
+        <textarea id="event-detail" rows="3" placeholder="予定の詳細（任意）"></textarea>
+      </div>
+      <div class="form-group">
+        <label>色</label>
+        <div id="color-picker" class="color-picker">
+          <button type="button" class="color-option selected" data-color="0" style="background:#FF8FAB" title="ピンク"></button>
+          <button type="button" class="color-option" data-color="1" style="background:#89CFF0" title="スカイブルー"></button>
+          <button type="button" class="color-option" data-color="2" style="background:#A7F3D0" title="ミントグリーン"></button>
+        </div>
+      </div>
+
+      <!-- 繰り返し設定 -->
+      <div class="form-group">
+        <label>繰り返し</label>
+        <select id="recurrence-type">
+          <option value="none">なし</option>
+          <option value="weekly">毎週</option>
+          <option value="biweekly">2週間ごと</option>
+          <option value="nth-weekday">第N曜日</option>
+          <option value="custom">カスタム（複数日選択）</option>
+        </select>
+      </div>
+
+      <!-- 毎週/2週間ごと設定 -->
+      <div id="weekly-options" class="recurrence-options hidden">
+        <label>曜日を選択</label>
+        <div class="weekday-selector">
+          <button type="button" class="weekday-btn" data-day="0">日</button>
+          <button type="button" class="weekday-btn" data-day="1">月</button>
+          <button type="button" class="weekday-btn" data-day="2">火</button>
+          <button type="button" class="weekday-btn" data-day="3">水</button>
+          <button type="button" class="weekday-btn" data-day="4">木</button>
+          <button type="button" class="weekday-btn" data-day="5">金</button>
+          <button type="button" class="weekday-btn" data-day="6">土</button>
+        </div>
+        <div class="form-group">
+          <label>終了日</label>
+          <input type="date" id="recurrence-end-date">
+        </div>
+      </div>
+
+      <!-- 第N曜日設定 -->
+      <div id="nth-weekday-options" class="recurrence-options hidden">
+        <div class="form-group">
+          <label>曜日</label>
+          <select id="nth-weekday-day">
+            <option value="0">日曜日</option>
+            <option value="1">月曜日</option>
+            <option value="2">火曜日</option>
+            <option value="3">水曜日</option>
+            <option value="4">木曜日</option>
+            <option value="5">金曜日</option>
+            <option value="6">土曜日</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>第何週（複数選択可）</label>
+          <div class="nth-selector">
+            <button type="button" class="nth-btn" data-nth="1">第1</button>
+            <button type="button" class="nth-btn" data-nth="2">第2</button>
+            <button type="button" class="nth-btn" data-nth="3">第3</button>
+            <button type="button" class="nth-btn" data-nth="4">第4</button>
+            <button type="button" class="nth-btn" data-nth="5">第5</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>終了日</label>
+          <input type="date" id="nth-end-date">
+        </div>
+      </div>
+
+      <!-- カスタム日付選択 -->
+      <div id="custom-options" class="recurrence-options hidden">
+        <label>日付を追加</label>
+        <div class="custom-date-input">
+          <input type="date" id="custom-date-add">
+          <button type="button" id="btn-add-custom-date" class="small-btn">追加</button>
+        </div>
+        <div id="custom-dates-list" class="custom-dates-list"></div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="btn-cancel-event" class="secondary-btn">キャンセル</button>
+        <button type="submit" class="primary-btn">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 確認ダイアログ -->
+<div id="confirm-dialog" class="modal hidden">
+  <div class="modal-content confirm-content">
+    <h3 id="confirm-title">確認</h3>
+    <p id="confirm-message"></p>
+    <div id="confirm-actions" class="form-actions"></div>
+  </div>
+</div>
+
+<!-- 同期設定モーダル -->
+<div id="sync-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>デバイス間同期設定</h3>
+      <button id="btn-close-sync" class="close-btn">✕</button>
+    </div>
+    <div class="sync-body">
+      <p class="sync-description">デバイス間でデータを共有するには、Firebase プロジェクトを設定してください。</p>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="text" id="fb-apiKey" placeholder="AIza...">
+      </div>
+      <div class="form-group">
+        <label>Auth Domain</label>
+        <input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com">
+      </div>
+      <div class="form-group">
+        <label>Project ID</label>
+        <input type="text" id="fb-projectId" placeholder="your-project-id">
+      </div>
+      <div class="form-group">
+        <label>ユーザーID（共有キー）</label>
+        <input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定">
+      </div>
+      <div class="form-actions">
+        <button id="btn-save-sync" class="primary-btn">保存して接続</button>
+        <button id="btn-disconnect-sync" class="secondary-btn">切断</button>
+      </div>
+      <div id="sync-status" class="sync-status"></div>
+      <hr>
+      <p class="sync-description">Firebaseが使えない場合は、エクスポート/インポートで共有できます。</p>
+      <div class="form-actions">
+        <button id="btn-export" class="secondary-btn">エクスポート</button>
+        <button id="btn-import" class="secondary-btn">インポート</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== カレンダーアプリ メインJS =====
+(() => {
+  'use strict';
+
+  const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+  const STORAGE_KEY = 'calendar_events';
+  const SYNC_CONFIG_KEY = 'calendar_sync_config';
+
+  let events = {};
+  let selectedDate = null;
+  let editingEvent = null;
+  let baseMonth = new Date();
+  let customDates = [];
+  let firebaseDb = null;
+  let firebaseUnsubscribe = null;
+
+  // ===== 日本の祝日計算 =====
+  function getJapaneseHolidays(year) {
+    const holidays = {};
+
+    function add(m, d, name) {
+      const key = `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      holidays[key] = name;
+    }
+
+    add(1,1,'元日');
+    add(2,11,'建国記念の日');
+    add(2,23,'天皇誕生日');
+    add(4,29,'昭和の日');
+    add(5,3,'憲法記念日');
+    add(5,4,'みどりの日');
+    add(5,5,'こどもの日');
+    add(8,11,'山の日');
+    add(11,3,'文化の日');
+    add(11,23,'勤労感謝の日');
+
+    function nthMonday(month, n) {
+      const first = new Date(year, month-1, 1);
+      let dow = first.getDay();
+      let firstMon = dow <= 1 ? (1 + (1 - dow)) : (1 + (8 - dow));
+      return firstMon + (n-1) * 7;
+    }
+
+    add(1, nthMonday(1,2), '成人の日');
+    add(7, nthMonday(7,3), '海の日');
+    add(9, nthMonday(9,3), '敬老の日');
+    add(10, nthMonday(10,2), 'スポーツの日');
+
+    const spring = Math.floor(20.8431 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
+    add(3, spring, '春分の日');
+
+    const autumn = Math.floor(23.2488 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
+    add(9, autumn, '秋分の日');
+
+    // 振替休日
+    const sorted = Object.keys(holidays).sort();
+    for (const key of sorted) {
+      const d = new Date(key + 'T00:00:00');
+      if (d.getDay() === 0) {
+        let sub = new Date(d);
+        sub.setDate(sub.getDate() + 1);
+        while (holidays[dateToKey(sub)]) sub.setDate(sub.getDate() + 1);
+        holidays[dateToKey(sub)] = '振替休日';
+      }
+    }
+
+    // 国民の休日
+    const allKeys = Object.keys(holidays).sort();
+    for (let i = 0; i < allKeys.length - 1; i++) {
+      const d1 = new Date(allKeys[i] + 'T00:00:00');
+      const d2 = new Date(allKeys[i+1] + 'T00:00:00');
+      if ((d2 - d1) / 86400000 === 2) {
+        const between = new Date(d1);
+        between.setDate(between.getDate() + 1);
+        const bKey = dateToKey(between);
+        if (!holidays[bKey] && between.getDay() !== 0) {
+          holidays[bKey] = '国民の休日';
+        }
+      }
+    }
+
+    return holidays;
+  }
+
+  // ===== ユーティリティ =====
+  function dateToKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+
+  function isToday(dateKey) { return dateKey === dateToKey(new Date()); }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2,9);
+  }
+
+  function formatDateJP(dateKey) {
+    const d = new Date(dateKey + 'T00:00:00');
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ===== ストレージ =====
+  function loadEvents() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      events = data ? JSON.parse(data) : {};
+    } catch { events = {}; }
+  }
+
+  function saveEvents() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    syncToFirebase();
+  }
+
+  function addEvent(dateKey, event) {
+    if (!events[dateKey]) events[dateKey] = [];
+    events[dateKey].push(event);
+    saveEvents();
+  }
+
+  function updateEvent(dateKey, eventId, updates) {
+    if (!events[dateKey]) return;
+    const idx = events[dateKey].findIndex(e => e.id === eventId);
+    if (idx !== -1) { Object.assign(events[dateKey][idx], updates); saveEvents(); }
+  }
+
+  function deleteEvent(dateKey, eventId) {
+    if (!events[dateKey]) return;
+    events[dateKey] = events[dateKey].filter(e => e.id !== eventId);
+    if (events[dateKey].length === 0) delete events[dateKey];
+    saveEvents();
+  }
+
+  function deleteEventsByGroupId(groupId) {
+    for (const dk of Object.keys(events)) {
+      events[dk] = events[dk].filter(e => e.groupId !== groupId);
+      if (events[dk].length === 0) delete events[dk];
+    }
+    saveEvents();
+  }
+
+  function getEventsForDate(dateKey) {
+    return (events[dateKey] || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+  }
+
+  // ===== Firebase同期 =====
+  function loadSyncConfig() {
+    try { return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY)); }
+    catch { return null; }
+  }
+
+  async function initFirebase() {
+    const config = loadSyncConfig();
+    if (!config || !config.apiKey || !config.projectId || !config.userId) return;
+    try {
+      if (!window.firebase) {
+        await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+        await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
+      }
+      if (!firebase.apps.length) {
+        firebase.initializeApp({ apiKey: config.apiKey, authDomain: config.authDomain||'', projectId: config.projectId });
+      }
+      firebaseDb = firebase.firestore();
+      if (firebaseUnsubscribe) firebaseUnsubscribe();
+      firebaseUnsubscribe = firebaseDb.collection('calendars').doc(config.userId)
+        .onSnapshot((doc) => {
+          if (doc.exists) {
+            events = doc.data().events || {};
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+            renderAllMonths();
+            if (selectedDate) renderDetailPanel(selectedDate);
+          }
+        });
+      updateSyncStatus('connected', '接続中 ✓');
+      syncToFirebase();
+    } catch (err) {
+      console.error('Firebase init error:', err);
+      updateSyncStatus('error', 'エラー: ' + err.message);
+    }
+  }
+
+  function syncToFirebase() {
+    const config = loadSyncConfig();
+    if (!firebaseDb || !config?.userId) return;
+    firebaseDb.collection('calendars').doc(config.userId).set(
+      { events, updatedAt: new Date().toISOString() }, { merge: true }
+    ).catch(err => console.error('Sync error:', err));
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function updateSyncStatus(type, message) {
+    const el = document.getElementById('sync-status');
+    el.className = 'sync-status ' + type;
+    el.textContent = message;
+  }
+
+  // ===== カレンダー描画 =====
+  const holidayCache = {};
+
+  function getHolidays(year) {
+    if (!holidayCache[year]) holidayCache[year] = getJapaneseHolidays(year);
+    return holidayCache[year];
+  }
+
+  function renderAllMonths() {
+    const container = document.getElementById('calendar-container');
+    container.innerHTML = '';
+    for (let offset = 0; offset < 2; offset++) {
+      const month = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + offset, 1);
+      container.appendChild(renderMonth(month, offset === 0));
+    }
+  }
+
+  function renderMonth(monthDate, showNav) {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const holidays = getHolidays(year);
+    if (month === 11) getHolidays(year + 1);
+
+    const block = document.createElement('div');
+    block.className = 'month-block';
+
+    const header = document.createElement('div');
+    header.className = 'month-header';
+    header.innerHTML = `<h2>${year}年 ${month+1}月</h2>${showNav ? '<div class="month-nav"><button id="btn-prev-month">◀</button><button id="btn-next-month">▶</button></div>' : ''}`;
+    block.appendChild(header);
+
+    const wh = document.createElement('div');
+    wh.className = 'weekday-header';
+    WEEKDAYS.forEach(d => { const s = document.createElement('span'); s.textContent = d; wh.appendChild(s); });
+    block.appendChild(wh);
+
+    const grid = document.createElement('div');
+    grid.className = 'month-grid';
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      const c = document.createElement('div');
+      c.className = 'day-cell empty';
+      grid.appendChild(c);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateKey = dateToKey(date);
+      const dow = date.getDay();
+      const holidayName = holidays[dateKey];
+
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      if (dow === 0) cell.classList.add('sunday');
+      if (dow === 6) cell.classList.add('saturday');
+      if (holidayName) cell.classList.add('holiday');
+      if (isToday(dateKey)) cell.classList.add('today');
+
+      const numEl = document.createElement('div');
+      numEl.className = 'day-number';
+      numEl.textContent = day;
+      cell.appendChild(numEl);
+
+      if (holidayName) {
+        const hEl = document.createElement('div');
+        hEl.className = 'holiday-name';
+        hEl.textContent = holidayName;
+        cell.appendChild(hEl);
+      }
+
+      const dayEvents = getEventsForDate(dateKey);
+      if (dayEvents.length > 0) {
+        const ec = document.createElement('div');
+        ec.className = 'day-events';
+        dayEvents.forEach(ev => {
+          const e = document.createElement('div');
+          e.className = `day-event-item color-${ev.colorIndex}`;
+          e.textContent = `${ev.time} ${ev.title}`;
+          ec.appendChild(e);
+        });
+        cell.appendChild(ec);
+      }
+
+      cell.addEventListener('click', () => openDetailPanel(dateKey));
+      grid.appendChild(cell);
+    }
+
+    block.appendChild(grid);
+    return block;
+  }
+
+  // ===== ナビゲーション =====
+  document.getElementById('calendar-container').addEventListener('click', (e) => {
+    if (e.target.id === 'btn-prev-month') { baseMonth.setMonth(baseMonth.getMonth()-1); renderAllMonths(); }
+    else if (e.target.id === 'btn-next-month') { baseMonth.setMonth(baseMonth.getMonth()+1); renderAllMonths(); }
+  });
+
+  document.getElementById('btn-today').addEventListener('click', () => {
+    baseMonth = new Date(); renderAllMonths();
+  });
+
+  // ===== 詳細パネル =====
+  function openDetailPanel(dateKey) {
+    selectedDate = dateKey;
+    renderDetailPanel(dateKey);
+    const panel = document.getElementById('detail-panel');
+    if (panel.classList.contains('hidden')) {
+      panel.classList.remove('hidden');
+      showOverlay();
+    }
+  }
+
+  function closeDetailPanel() {
+    document.getElementById('detail-panel').classList.add('hidden');
+    selectedDate = null;
+    hideOverlay();
+  }
+
+  function renderDetailPanel(dateKey) {
+    document.getElementById('detail-date-title').textContent = formatDateJP(dateKey);
+    const list = document.getElementById('detail-events-list');
+    const dayEvents = getEventsForDate(dateKey);
+
+    if (dayEvents.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:#9CA3AF;padding:24px;">予定はありません</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+    dayEvents.forEach(ev => {
+      const card = document.createElement('div');
+      card.className = `detail-event-card color-${ev.colorIndex}`;
+      card.innerHTML = `
+        <div class="detail-event-time">${ev.time}</div>
+        <div class="detail-event-title">${escapeHtml(ev.title)}</div>
+        ${ev.detail ? `<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>` : ''}
+        <div class="detail-event-actions">
+          <button class="edit-btn" data-id="${ev.id}">編集</button>
+          <button class="delete-btn" data-id="${ev.id}" data-group="${ev.groupId || ''}">削除</button>
+        </div>`;
+      list.appendChild(card);
+    });
+  }
+
+  document.getElementById('detail-events-list').addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-btn');
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (editBtn) {
+      const ev = (events[selectedDate]||[]).find(x => x.id === editBtn.dataset.id);
+      if (ev) openEditModal(ev);
+    }
+    if (deleteBtn) {
+      const gid = deleteBtn.dataset.group;
+      if (gid) showDeleteGroupConfirm(deleteBtn.dataset.id, gid);
+      else showDeleteConfirm(deleteBtn.dataset.id);
+    }
+  });
+
+  document.getElementById('btn-close-detail').addEventListener('click', closeDetailPanel);
+  document.getElementById('btn-add-event').addEventListener('click', openAddModal);
+
+  function showOverlay() {
+    let o = document.getElementById('panel-overlay');
+    if (!o) { o = document.createElement('div'); o.id = 'panel-overlay'; document.body.appendChild(o); o.addEventListener('click', closeDetailPanel); }
+    o.classList.add('active');
+  }
+
+  function hideOverlay() {
+    const o = document.getElementById('panel-overlay');
+    if (o) o.classList.remove('active');
+  }
+
+  // ===== 予定モーダル =====
+  function openAddModal() {
+    editingEvent = null;
+    document.getElementById('modal-title').textContent = '予定を追加';
+    document.getElementById('event-form').reset();
+    document.getElementById('event-time').value = '09:00';
+    customDates = []; renderCustomDates();
+    resetColorPicker(0); resetRecurrenceUI();
+    document.getElementById('event-modal').classList.remove('hidden');
+  }
+
+  function openEditModal(ev) {
+    editingEvent = ev;
+    document.getElementById('modal-title').textContent = '予定を編集';
+    document.getElementById('event-time').value = ev.time;
+    document.getElementById('event-title').value = ev.title;
+    document.getElementById('event-detail').value = ev.detail || '';
+    resetColorPicker(ev.colorIndex);
+    document.getElementById('recurrence-type').value = 'none';
+    resetRecurrenceUI();
+    document.getElementById('event-modal').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('event-modal').classList.add('hidden');
+    editingEvent = null;
+  }
+
+  function resetColorPicker(idx) {
+    document.querySelectorAll('.color-option').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.color) === idx));
+  }
+
+  function getSelectedColor() {
+    const s = document.querySelector('.color-option.selected');
+    return s ? parseInt(s.dataset.color) : 0;
+  }
+
+  function resetRecurrenceUI() {
+    document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.weekday-btn, .nth-btn').forEach(b => b.classList.remove('active'));
+    customDates = []; renderCustomDates();
+  }
+
+  document.getElementById('color-picker').addEventListener('click', (e) => {
+    const btn = e.target.closest('.color-option');
+    if (!btn) return;
+    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+
+  document.getElementById('recurrence-type').addEventListener('change', (e) => {
+    const type = e.target.value;
+    document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
+    if (type === 'weekly' || type === 'biweekly') document.getElementById('weekly-options').classList.remove('hidden');
+    else if (type === 'nth-weekday') document.getElementById('nth-weekday-options').classList.remove('hidden');
+    else if (type === 'custom') document.getElementById('custom-options').classList.remove('hidden');
+  });
+
+  document.querySelectorAll('.weekday-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
+  document.querySelectorAll('.nth-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
+
+  document.getElementById('btn-add-custom-date').addEventListener('click', () => {
+    const input = document.getElementById('custom-date-add');
+    if (input.value && !customDates.includes(input.value)) {
+      customDates.push(input.value); customDates.sort(); renderCustomDates(); input.value = '';
+    }
+  });
+
+  function renderCustomDates() {
+    const c = document.getElementById('custom-dates-list');
+    c.innerHTML = '';
+    customDates.forEach(d => {
+      const t = document.createElement('span');
+      t.className = 'custom-date-tag';
+      t.innerHTML = `${d} <button data-date="${d}">✕</button>`;
+      c.appendChild(t);
+    });
+  }
+
+  document.getElementById('custom-dates-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (btn) { customDates = customDates.filter(d => d !== btn.dataset.date); renderCustomDates(); }
+  });
+
+  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+  document.getElementById('btn-cancel-event').addEventListener('click', closeModal);
+
+  // ===== フォーム送信 =====
+  document.getElementById('event-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const time = document.getElementById('event-time').value;
+    const title = document.getElementById('event-title').value.trim();
+    const detail = document.getElementById('event-detail').value.trim();
+    const colorIndex = getSelectedColor();
+    const recurrenceType = document.getElementById('recurrence-type').value;
+
+    if (!title) return;
+
+    if (editingEvent) {
+      updateEvent(selectedDate, editingEvent.id, { time, title, detail, colorIndex });
+      closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+      return;
+    }
+
+    if (recurrenceType === 'none') {
+      addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
+    } else {
+      const dates = generateRecurringDates(recurrenceType, selectedDate);
+      const groupId = generateId();
+      dates.forEach(dk => addEvent(dk, { id: generateId(), groupId, time, title, detail, colorIndex }));
+    }
+
+    closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+  });
+
+  // ===== 繰り返し日付生成 =====
+  function generateRecurringDates(type, startDateKey) {
+    const dates = [];
+    const startDate = new Date(startDateKey + 'T00:00:00');
+
+    if (type === 'weekly' || type === 'biweekly') {
+      const interval = type === 'biweekly' ? 2 : 1;
+      const selectedDays = [];
+      document.querySelectorAll('.weekday-btn.active').forEach(b => selectedDays.push(parseInt(b.dataset.day)));
+      if (selectedDays.length === 0) selectedDays.push(startDate.getDay());
+
+      const endInput = document.getElementById('recurrence-end-date').value;
+      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
+      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 1);
+
+      let cur = new Date(startDate);
+      cur.setDate(cur.getDate() - cur.getDay());
+
+      while (cur <= endDate) {
+        for (const dow of selectedDays) {
+          const t = new Date(cur);
+          t.setDate(t.getDate() + dow);
+          if (t >= startDate && t <= endDate) dates.push(dateToKey(t));
+        }
+        cur.setDate(cur.getDate() + 7 * interval);
+      }
+    } else if (type === 'nth-weekday') {
+      const dow = parseInt(document.getElementById('nth-weekday-day').value);
+      const nths = [];
+      document.querySelectorAll('.nth-btn.active').forEach(b => nths.push(parseInt(b.dataset.nth)));
+      if (nths.length === 0) return [startDateKey];
+
+      const endInput = document.getElementById('nth-end-date').value;
+      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
+      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 1);
+
+      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cur <= endDate) {
+        for (const nth of nths) {
+          const d = getNthWeekday(cur.getFullYear(), cur.getMonth(), dow, nth);
+          if (d && d >= startDate && d <= endDate) dates.push(dateToKey(d));
+        }
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    } else if (type === 'custom') {
+      if (customDates.length > 0) dates.push(...customDates);
+      if (!dates.includes(startDateKey)) dates.push(startDateKey);
+    }
+
+    return [...new Set(dates)].sort();
+  }
+
+  function getNthWeekday(year, month, dow, nth) {
+    const first = new Date(year, month, 1);
+    let firstOcc = 1 + ((dow - first.getDay() + 7) % 7);
+    const target = firstOcc + (nth - 1) * 7;
+    if (target > new Date(year, month + 1, 0).getDate()) return null;
+    return new Date(year, month, target);
+  }
+
+  // ===== 削除確認 =====
+  function showDeleteConfirm(eventId) {
+    const dialog = document.getElementById('confirm-dialog');
+    document.getElementById('confirm-title').textContent = '予定を削除';
+    document.getElementById('confirm-message').textContent = 'この予定を削除してもよろしいですか？';
+    document.getElementById('confirm-actions').innerHTML =
+      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>' +
+      '<button class="primary-btn" style="background:#DC2626" id="confirm-ok">削除</button>';
+    dialog.classList.remove('hidden');
+
+    document.getElementById('confirm-ok').onclick = () => {
+      deleteEvent(selectedDate, eventId); dialog.classList.add('hidden');
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
+  }
+
+  function showDeleteGroupConfirm(eventId, groupId) {
+    const dialog = document.getElementById('confirm-dialog');
+    document.getElementById('confirm-title').textContent = '繰り返し予定の削除';
+    document.getElementById('confirm-message').textContent = '削除する範囲を選択してください。';
+    document.getElementById('confirm-actions').innerHTML =
+      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>' +
+      '<button class="secondary-btn" id="confirm-single" style="color:#DC2626">この日のみ</button>' +
+      '<button class="primary-btn" id="confirm-all" style="background:#DC2626">すべて削除</button>';
+    dialog.classList.remove('hidden');
+
+    document.getElementById('confirm-single').onclick = () => {
+      deleteEvent(selectedDate, eventId); dialog.classList.add('hidden');
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    document.getElementById('confirm-all').onclick = () => {
+      deleteEventsByGroupId(groupId); dialog.classList.add('hidden');
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
+  }
+
+  // ===== 同期設定 =====
+  document.getElementById('btn-sync').addEventListener('click', () => {
+    const config = loadSyncConfig();
+    if (config) {
+      document.getElementById('fb-apiKey').value = config.apiKey || '';
+      document.getElementById('fb-authDomain').value = config.authDomain || '';
+      document.getElementById('fb-projectId').value = config.projectId || '';
+      document.getElementById('fb-userId').value = config.userId || '';
+    }
+    document.getElementById('sync-modal').classList.remove('hidden');
+  });
+
+  document.getElementById('btn-close-sync').addEventListener('click', () => document.getElementById('sync-modal').classList.add('hidden'));
+
+  document.getElementById('btn-save-sync').addEventListener('click', () => {
+    const config = {
+      apiKey: document.getElementById('fb-apiKey').value.trim(),
+      authDomain: document.getElementById('fb-authDomain').value.trim(),
+      projectId: document.getElementById('fb-projectId').value.trim(),
+      userId: document.getElementById('fb-userId').value.trim(),
+    };
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config));
+    initFirebase();
+  });
+
+  document.getElementById('btn-disconnect-sync').addEventListener('click', () => {
+    if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
+    firebaseDb = null;
+    localStorage.removeItem(SYNC_CONFIG_KEY);
+    updateSyncStatus('', '切断しました');
+  });
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `calendar-backup-${dateToKey(new Date())}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
+
+  document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        for (const [dk, evList] of Object.entries(imported)) {
+          if (!events[dk]) events[dk] = [];
+          for (const ev of evList) {
+            if (!events[dk].find(x => x.id === ev.id)) events[dk].push(ev);
+          }
+        }
+        saveEvents(); renderAllMonths();
+        if (selectedDate) renderDetailPanel(selectedDate);
+        alert('インポートが完了しました。');
+      } catch { alert('ファイルの読み込みに失敗しました。'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ===== 背景クリック =====
+  document.getElementById('confirm-dialog').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+  document.getElementById('event-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('sync-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+  });
+
+  // ===== 初期化 =====
+  loadEvents();
+  baseMonth = new Date();
+  renderAllMonths();
+  initFirebase();
+})();
+</script>
+</body>
+</html>
