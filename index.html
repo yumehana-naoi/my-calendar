@@ -725,21 +725,43 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-add-event').addEventListener('click',openAddModal);
   document.getElementById('panel-overlay').addEventListener('click',closeDetailPanel);
 
+  // ===== 確認ダイアログ共通 =====
+  let confirmAction = null;
+
+  document.getElementById('confirm-actions').addEventListener('click',(e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    e.stopPropagation();
+    const action = btn.dataset.action;
+    const dialog = document.getElementById('confirm-dialog');
+    if(action==='cancel'){ dialog.classList.add('hidden'); return; }
+    if(confirmAction) confirmAction(action);
+    dialog.classList.add('hidden');
+  });
+
+  function showConfirmDialog(title, message, buttons, onAction) {
+    confirmAction = onAction;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-actions').innerHTML = buttons;
+    document.getElementById('confirm-dialog').classList.remove('hidden');
+  }
+
   // ===== 済み確認 =====
   function showDoneConfirm(eventId,isDone) {
-    const dialog=document.getElementById('confirm-dialog');
     const msg=isDone?'この予定を「未完了」に戻しますか？':'この予定を「済」にしますか？';
-    document.getElementById('confirm-title').textContent=isDone?'未完了に戻す':'予定を完了にする';
-    document.getElementById('confirm-message').textContent=msg;
-    document.getElementById('confirm-actions').innerHTML=
-      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>'+
-      `<button class="primary-btn" id="confirm-ok" style="background:${isDone?'#D97706':'#059669'}">${isDone?'戻す':'済にする'}</button>`;
-    dialog.classList.remove('hidden');
-    document.getElementById('confirm-ok').onclick=()=>{
-      updateEvent(selectedDate,eventId,{done:!isDone}); saveEvents(); dialog.classList.add('hidden');
-      renderDetailPanel(selectedDate); renderAllMonths();
-    };
-    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
+    const btnColor=isDone?'#D97706':'#059669';
+    const btnLabel=isDone?'戻す':'済にする';
+    showConfirmDialog(
+      isDone?'未完了に戻す':'予定を完了にする', msg,
+      `<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="primary-btn" data-action="ok" style="background:${btnColor}">${btnLabel}</button>`,
+      (action)=>{
+        if(action==='ok'){
+          updateEvent(selectedDate,eventId,{done:!isDone}); saveEvents();
+          renderDetailPanel(selectedDate); renderAllMonths();
+        }
+      }
+    );
   }
 
   // ===== 予定モーダル =====
@@ -940,23 +962,29 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 削除確認 =====
   function showDeleteConfirm(eventId) {
-    const dialog=document.getElementById('confirm-dialog');
-    document.getElementById('confirm-title').textContent='予定を削除';
-    document.getElementById('confirm-message').textContent='この予定を削除してもよろしいですか？';
-    document.getElementById('confirm-actions').innerHTML='<button class="secondary-btn" id="confirm-cancel">キャンセル</button><button class="primary-btn" style="background:#DC2626" id="confirm-ok">削除</button>';
-    dialog.classList.remove('hidden');
-    document.getElementById('confirm-ok').onclick=()=>{deleteEvent(selectedDate,eventId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
-    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
+    showConfirmDialog('予定を削除','この予定を削除してもよろしいですか？',
+      '<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="primary-btn" style="background:#DC2626" data-action="ok">削除</button>',
+      (action)=>{
+        if(action==='ok'){
+          deleteEvent(selectedDate,eventId); saveEvents();
+          renderDetailPanel(selectedDate); renderAllMonths();
+        }
+      }
+    );
   }
   function showDeleteGroupConfirm(eventId,groupId) {
-    const dialog=document.getElementById('confirm-dialog');
-    document.getElementById('confirm-title').textContent='繰り返し予定の削除';
-    document.getElementById('confirm-message').textContent='削除する範囲を選択してください。';
-    document.getElementById('confirm-actions').innerHTML='<button class="secondary-btn" id="confirm-cancel">キャンセル</button><button class="secondary-btn" id="confirm-single" style="color:#DC2626">この日のみ</button><button class="primary-btn" id="confirm-all" style="background:#DC2626">すべて削除</button>';
-    dialog.classList.remove('hidden');
-    document.getElementById('confirm-single').onclick=()=>{deleteEvent(selectedDate,eventId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
-    document.getElementById('confirm-all').onclick=()=>{deleteEventsByGroupId(groupId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
-    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
+    showConfirmDialog('繰り返し予定の削除','削除する範囲を選択してください。',
+      '<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="secondary-btn" style="color:#DC2626" data-action="single">この日のみ</button><button class="primary-btn" style="background:#DC2626" data-action="all">すべて削除</button>',
+      (action)=>{
+        if(action==='single'){
+          deleteEvent(selectedDate,eventId); saveEvents();
+          renderDetailPanel(selectedDate); renderAllMonths();
+        } else if(action==='all'){
+          deleteEventsByGroupId(groupId); saveEvents();
+          renderDetailPanel(selectedDate); renderAllMonths();
+        }
+      }
+    );
   }
 
   // ===== 同期設定 =====
@@ -979,7 +1007,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   });
 
   // 背景クリック
-  document.getElementById('confirm-dialog').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
+  document.getElementById('confirm-dialog').addEventListener('click',(e)=>{if(e.target===e.currentTarget){e.currentTarget.classList.add('hidden');confirmAction=null;}});
   document.getElementById('event-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
   document.getElementById('sync-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 
