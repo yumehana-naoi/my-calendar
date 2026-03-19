@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>カレンダー</title>
 <style>
-/* ===== リセット & ベース ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -39,501 +38,228 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== ヘッダー ===== */
 #app-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #FFFFFF;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: #FFFFFF;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-
 #app-header h1 { font-size: 1.2rem; font-weight: 700; }
 .header-actions { display: flex; gap: 8px; }
-
 .header-btn {
-  padding: 6px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: white;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background 0.15s;
+  padding: 6px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: white;
+  cursor: pointer; font-size: 0.85rem; transition: background 0.15s;
 }
 .header-btn:hover { background: var(--bg); }
 
-/* ===== メインレイアウト ===== */
-#main-layout {
-  display: flex;
-  max-width: 1600px;
-  margin: 0 auto;
-}
+#main-layout { display: flex; max-width: 1600px; margin: 0 auto; }
+#calendar-container { flex: 1; min-width: 0; padding: 8px; }
 
-#calendar-container {
-  flex: 1;
-  min-width: 0;
-  padding: 8px;
-}
-
-/* ===== 詳細パネル（サイドバー方式） ===== */
 #detail-panel {
-  width: 400px;
-  min-width: 400px;
-  background: white;
+  width: 400px; min-width: 400px; background: white;
   border-left: 1px solid var(--border);
   box-shadow: -2px 0 10px rgba(0,0,0,0.05);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 52px;
-  height: calc(100vh - 52px);
+  display: flex; flex-direction: column;
+  position: sticky; top: 52px; height: calc(100vh - 52px);
 }
-
-#detail-panel.hidden {
-  width: 0;
-  min-width: 0;
-  overflow: hidden;
-  border-left: none;
-  box-shadow: none;
-}
+#detail-panel.hidden { width: 0; min-width: 0; overflow: hidden; border-left: none; box-shadow: none; }
 
 .panel-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
   min-width: 400px; background: #FAFBFC;
 }
-
 .panel-header h2 { font-size: 1.1rem; white-space: nowrap; }
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  min-width: 400px;
-}
-
+.panel-body { flex: 1; overflow-y: auto; min-width: 400px; }
 #detail-events-list { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.panel-footer { padding: 12px 20px 16px; min-width: 400px; border-top: 1px solid var(--border); }
 
-.panel-footer {
-  padding: 12px 20px 16px;
-  min-width: 400px;
-  border-top: 1px solid var(--border);
-}
-
-/* ===== 月ヘッダー ===== */
-.month-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 8px 8px;
-}
-
+.month-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 8px 8px; }
 .month-header h2 { font-size: 1.3rem; font-weight: 700; }
 .month-nav { display: flex; gap: 4px; }
-
 .month-nav button {
-  width: 32px; height: 32px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: white;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: white; cursor: pointer;
+  font-size: 1rem; display: flex; align-items: center; justify-content: center;
 }
 .month-nav button:hover { background: var(--bg); }
 
-/* ===== 曜日ヘッダー ===== */
 .weekday-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 8px 0 4px;
-  position: sticky;
-  top: 52px;
-  background: var(--bg);
-  z-index: 10;
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  text-align: center; font-size: 0.8rem; font-weight: 600;
+  padding: 8px 0 4px; position: sticky; top: 52px; background: var(--bg); z-index: 10;
 }
-
 .weekday-header span { padding: 4px; }
 .weekday-header span:first-child { color: var(--sunday); }
 .weekday-header span:last-child { color: var(--saturday); }
 
-/* ===== カレンダーグリッド ===== */
-.month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: 8px;
-}
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 8px; }
 
-/* ===== 日セル ===== */
 .day-cell {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  min-height: 80px;
-  padding: 4px;
-  cursor: pointer;
-  transition: box-shadow 0.15s;
-  display: flex;
-  flex-direction: column;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); min-height: 80px; padding: 4px;
+  cursor: pointer; transition: box-shadow 0.15s;
+  display: flex; flex-direction: column;
 }
-
 .day-cell:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-.day-cell.empty {
-  background: transparent; border: none; cursor: default; min-height: 0;
-}
+.day-cell.empty { background: transparent; border: none; cursor: default; min-height: 0; }
 .day-cell.empty:hover { box-shadow: none; }
+.day-cell.today { border: 3px solid var(--today-border); background: var(--today-bg); box-shadow: 0 0 0 1px var(--today-border); }
+.day-cell.selected-day { box-shadow: 0 0 0 2px var(--accent); }
 
-.day-cell.today {
-  border: 3px solid var(--today-border);
-  background: var(--today-bg);
-  box-shadow: 0 0 0 1px var(--today-border);
-}
-
-.day-cell.selected-day {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.day-number {
-  font-size: 0.85rem; font-weight: 600;
-  padding: 2px 4px; border-radius: 4px;
-  display: inline-block; margin-bottom: 2px; line-height: 1;
-}
-
-.day-cell.sunday .day-number,
-.day-cell.holiday .day-number { color: var(--sunday); }
+.day-number { font-size: 0.85rem; font-weight: 600; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 2px; line-height: 1; }
+.day-cell.sunday .day-number, .day-cell.holiday .day-number { color: var(--sunday); }
 .day-cell.saturday .day-number { color: var(--saturday); }
-.day-cell.today .day-number {
-  background: var(--today-border); color: white; padding: 3px 6px;
-}
+.day-cell.today .day-number { background: var(--today-border); color: white; padding: 3px 6px; }
 
-.holiday-name {
-  font-size: 0.55rem; color: var(--holiday);
-  line-height: 1.1; margin-bottom: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.holiday-name { font-size: 0.55rem; color: var(--holiday); line-height: 1.1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ===== 日内の予定表示 ===== */
 .day-events { flex: 1; overflow: visible; }
-
 .day-event-item {
   font-size: 0.65rem; padding: 2px 4px; margin-bottom: 1px;
   border-radius: 3px; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
 }
-
 .day-event-item.color-0 { background: var(--color0-bg); border-left: 3px solid var(--color0); }
 .day-event-item.color-1 { background: var(--color1-bg); border-left: 3px solid var(--color1); }
 .day-event-item.color-2 { background: var(--color2-bg); border-left: 3px solid var(--color2); }
 
-/* ===== 詳細カード（見やすく改善） ===== */
+/* 済み表示 */
+.day-event-item.done-item { opacity: 0.45; text-decoration: line-through; }
+
 .detail-event-card {
   background: #FFFFFF; border-radius: 10px;
   padding: 16px 18px; margin-bottom: 14px;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, opacity 0.2s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   border: 1px solid var(--border);
 }
-
 .detail-event-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); }
-
 .detail-event-card.color-0 { border-left: 5px solid var(--color0); }
 .detail-event-card.color-1 { border-left: 5px solid var(--color1); }
 .detail-event-card.color-2 { border-left: 5px solid var(--color2); }
 
-.detail-event-time {
-  font-size: 0.8rem; font-weight: 600; color: var(--text-light);
-  margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
-}
+/* 済みカード */
+.detail-event-card.done-card { opacity: 0.45; }
+.detail-event-card.done-card .detail-event-title { text-decoration: line-through; }
+.detail-event-card.done-card .detail-event-time { text-decoration: line-through; }
+
+.detail-event-time { font-size: 0.8rem; font-weight: 600; color: var(--text-light); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
 .detail-event-time::before { content: '🕐'; font-size: 0.75rem; }
+.detail-event-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: var(--text); line-height: 1.4; }
+.detail-event-detail { font-size: 0.88rem; color: var(--text-light); white-space: pre-wrap; line-height: 1.6; padding: 10px 12px; background: var(--bg); border-radius: 6px; margin-bottom: 4px; }
 
-.detail-event-title {
-  font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;
-  color: var(--text); line-height: 1.4;
-}
 
-.detail-event-detail {
-  font-size: 0.88rem; color: var(--text-light); white-space: pre-wrap;
-  line-height: 1.6; padding: 10px 12px;
-  background: var(--bg); border-radius: 6px;
-  margin-bottom: 4px;
-}
-
-.detail-event-actions {
-  display: flex; gap: 8px; margin-top: 12px;
-  padding-top: 10px; border-top: 1px solid var(--border);
-}
-
+.detail-event-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .detail-event-actions button {
-  padding: 6px 16px; border-radius: 6px;
+  padding: 6px 12px; border-radius: 6px;
   border: 1px solid var(--border); background: white;
-  cursor: pointer; font-size: 0.8rem; font-weight: 500;
-  transition: all 0.15s;
+  cursor: pointer; font-size: 0.78rem; font-weight: 500; transition: all 0.15s;
 }
-
+.detail-event-actions .done-btn { color: #059669; border-color: #A7F3D0; }
+.detail-event-actions .done-btn:hover { background: #ECFDF5; }
+.detail-event-actions .undone-btn { color: #D97706; border-color: #FDE68A; }
+.detail-event-actions .undone-btn:hover { background: #FFFBEB; }
 .detail-event-actions .edit-btn:hover { background: var(--color0-bg); border-color: var(--color0); }
 .detail-event-actions .delete-btn { color: #DC2626; border-color: #FCA5A5; }
 .detail-event-actions .delete-btn:hover { background: #FEF2F2; }
 
-.detail-no-events {
-  text-align: center; color: #9CA3AF; padding: 40px 20px;
-  font-size: 0.95rem; line-height: 1.6;
-}
+.detail-no-events { text-align: center; color: #9CA3AF; padding: 40px 20px; font-size: 0.95rem; line-height: 1.6; }
 
-/* ===== モーダル ===== */
-.modal {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 300;
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-}
 
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .modal.hidden { display: none; }
-
-.modal-content {
-  background: white; border-radius: 12px;
-  width: 100%; max-width: 480px; max-height: 90vh;
-  overflow-y: auto; padding: 20px;
-}
-
-.modal-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 16px;
-}
-
+.modal-content { background: white; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 20px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
-
 .confirm-content { max-width: 360px; text-align: center; }
 .confirm-content h3 { margin-bottom: 12px; }
 .confirm-content p { margin-bottom: 16px; color: var(--text-light); font-size: 0.9rem; }
 
-/* ===== フォーム ===== */
 .form-group { margin-bottom: 14px; }
-
-.form-group label {
-  display: block; font-size: 0.8rem; font-weight: 600;
-  margin-bottom: 4px; color: var(--text-light);
-}
-
-.form-group input[type="text"],
-.form-group input[type="time"],
-.form-group input[type="date"],
-.form-group input[type="number"],
-.form-group textarea,
-.form-group select {
-  width: 100%; padding: 8px 12px;
-  border: 1px solid var(--border); border-radius: var(--radius);
+.form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: var(--text-light); }
+.form-group input[type="text"], .form-group input[type="time"], .form-group input[type="date"],
+.form-group input[type="number"], .form-group textarea, .form-group select {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
   font-size: 0.9rem; font-family: inherit; background: white;
 }
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none; border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
 }
 
-/* ===== 色選択 ===== */
 .color-picker { display: flex; gap: 12px; align-items: center; }
-
-.color-option {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 3px solid transparent; cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s;
-}
-
+.color-option { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: transform 0.15s, border-color 0.15s; }
 .color-option:hover { transform: scale(1.1); }
 .color-option.selected { border-color: var(--text); transform: scale(1.15); }
-
 .color-label { font-size: 0.75rem; color: var(--text-light); margin-left: -4px; }
 
-/* ===== 曜日セレクター ===== */
 .weekday-selector, .nth-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+.weekday-btn, .nth-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: white; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
+.weekday-btn.active, .nth-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-.weekday-btn, .nth-btn {
-  padding: 6px 12px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: white;
-  cursor: pointer; font-size: 0.8rem; transition: all 0.15s;
-}
-
-.weekday-btn.active, .nth-btn.active {
-  background: var(--accent); color: white; border-color: var(--accent);
-}
-
-/* ===== 繰り返し間隔 ===== */
-.interval-row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-}
+.interval-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .interval-row span { font-size: 0.85rem; white-space: nowrap; }
-.interval-row select {
-  width: auto; padding: 6px 8px;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  font-size: 0.9rem; background: white;
-}
+.interval-row select { width: auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; background: white; }
 
-/* ===== 毎月何日 ===== */
-.monthly-day-row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-}
+.monthly-day-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .monthly-day-row span { font-size: 0.85rem; white-space: nowrap; }
-.monthly-day-row select {
-  width: auto; padding: 6px 8px;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  font-size: 0.9rem; background: white;
-}
+.monthly-day-row select { width: auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; background: white; }
 
-/* ===== ミニカレンダー（カスタム日付選択） ===== */
-.mini-cal-nav {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 8px;
-}
+.mini-cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .mini-cal-nav span { font-weight: 600; font-size: 0.9rem; }
-.mini-cal-nav button {
-  width: 28px; height: 28px;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: white; cursor: pointer; font-size: 0.85rem;
-  display: flex; align-items: center; justify-content: center;
-}
+.mini-cal-nav button { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius); background: white; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
 .mini-cal-nav button:hover { background: var(--bg); }
-
-.mini-cal-weekdays {
-  display: grid; grid-template-columns: repeat(7, 1fr);
-  text-align: center; font-size: 0.7rem; font-weight: 600;
-  color: var(--text-light); margin-bottom: 4px;
-}
+.mini-cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
 .mini-cal-weekdays span:first-child { color: var(--sunday); }
 .mini-cal-weekdays span:last-child { color: var(--saturday); }
-
-.mini-cal-grid {
-  display: grid; grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-
-.mini-cal-day {
-  padding: 6px 2px; text-align: center;
-  border-radius: 4px; cursor: pointer;
-  font-size: 0.8rem; border: 1px solid transparent;
-  transition: all 0.12s;
-}
+.mini-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mini-cal-day { padding: 6px 2px; text-align: center; border-radius: 4px; cursor: pointer; font-size: 0.8rem; border: 1px solid transparent; transition: all 0.12s; }
 .mini-cal-day:hover { background: var(--bg); }
 .mini-cal-day.empty { cursor: default; }
 .mini-cal-day.empty:hover { background: transparent; }
-.mini-cal-day.checked {
-  background: var(--accent); color: white; font-weight: 700;
-}
+.mini-cal-day.checked { background: var(--accent); color: white; font-weight: 700; }
 .mini-cal-day.sun { color: var(--sunday); }
 .mini-cal-day.sat { color: var(--saturday); }
-.mini-cal-day.checked.sun,
-.mini-cal-day.checked.sat { color: white; }
+.mini-cal-day.checked.sun, .mini-cal-day.checked.sat { color: white; }
 
-.selected-dates-summary {
-  margin-top: 8px; padding: 8px;
-  background: var(--bg); border-radius: var(--radius);
-  font-size: 0.8rem; color: var(--text-light);
-  max-height: 80px; overflow-y: auto;
-}
-
-.selected-dates-chips {
-  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
-}
-
-.date-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 8px; background: var(--color0-bg);
-  border-radius: 12px; font-size: 0.75rem; color: var(--text);
-}
-.date-chip button {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-light); font-size: 0.8rem; padding: 0; line-height: 1;
-}
+.selected-dates-summary { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: var(--radius); font-size: 0.8rem; color: var(--text-light); max-height: 80px; overflow-y: auto; }
+.selected-dates-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.date-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: var(--color0-bg); border-radius: 12px; font-size: 0.75rem; color: var(--text); }
+.date-chip button { background: none; border: none; cursor: pointer; color: var(--text-light); font-size: 0.8rem; padding: 0; line-height: 1; }
 .date-chip button:hover { color: var(--sunday); }
 
-/* ===== ボタン ===== */
-.primary-btn {
-  width: 100%; padding: 10px 20px;
-  background: var(--accent); color: white; border: none;
-  border-radius: var(--radius); font-size: 0.9rem;
-  font-weight: 600; cursor: pointer; transition: opacity 0.15s;
-}
+
+.primary-btn { width: 100%; padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
 .primary-btn:hover { opacity: 0.85; }
-
-.secondary-btn {
-  padding: 10px 20px; background: white; color: var(--text);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  font-size: 0.9rem; cursor: pointer;
-}
+.secondary-btn { padding: 10px 20px; background: white; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; cursor: pointer; }
 .secondary-btn:hover { background: var(--bg); }
-
-.close-btn {
-  width: 32px; height: 32px; border: none; background: none;
-  font-size: 1.2rem; cursor: pointer; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-}
+.close-btn { width: 32px; height: 32px; border: none; background: none; font-size: 1.2rem; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .close-btn:hover { background: var(--bg); }
-
 .form-actions { display: flex; gap: 8px; margin-top: 16px; }
 .form-actions .primary-btn { flex: 1; }
 .form-actions .secondary-btn { flex: 1; }
 
-/* ===== 繰り返しオプション ===== */
-.recurrence-options {
-  padding: 12px; background: var(--bg);
-  border-radius: var(--radius); margin-bottom: 14px;
-}
+.recurrence-options { padding: 12px; background: var(--bg); border-radius: var(--radius); margin-bottom: 14px; }
 .recurrence-options.hidden { display: none; }
 
-/* ===== 同期設定 ===== */
 .sync-body { padding: 0 4px; }
-
-.sync-description {
-  font-size: 0.85rem; color: var(--text-light);
-  margin-bottom: 12px; line-height: 1.5;
-}
-
-.sync-status {
-  margin-top: 8px; padding: 8px; border-radius: var(--radius);
-  font-size: 0.8rem; text-align: center;
-}
-
+.sync-description { font-size: 0.85rem; color: var(--text-light); margin-bottom: 12px; line-height: 1.5; }
+.sync-status { margin-top: 8px; padding: 8px; border-radius: var(--radius); font-size: 0.8rem; text-align: center; }
 .sync-status.connected { background: #E8F5E9; color: #065F46; }
 .sync-status.error { background: #FEF2F2; color: #DC2626; }
 
 hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
-/* ===== パネルオーバーレイ (モバイルのみ) ===== */
-#panel-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
-  z-index: 190; display: none;
-}
+#panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 190; display: none; }
 
-/* ===== レスポンシブ ===== */
 @media (max-width: 768px) {
   #main-layout { display: block; }
-
-  #detail-panel {
-    position: fixed; right: 0; top: 0; bottom: 0;
-    width: 100%; min-width: unset;
-    z-index: 200;
-    transition: transform 0.25s ease;
-  }
-  #detail-panel.hidden {
-    transform: translateX(100%);
-    width: 100%; min-width: unset;
-    overflow: hidden; border-left: none; box-shadow: none;
-  }
+  #detail-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 100%; min-width: unset; z-index: 200; transition: transform 0.25s ease; }
+  #detail-panel.hidden { transform: translateX(100%); width: 100%; min-width: unset; overflow: hidden; border-left: none; box-shadow: none; }
   .panel-header, .panel-body, .panel-footer { min-width: unset; }
-
   #panel-overlay.active { display: block; }
-
   .day-cell { min-height: 60px; padding: 2px; }
   .day-number { font-size: 0.75rem; }
   .day-event-item { font-size: 0.55rem; padding: 1px 3px; }
@@ -541,19 +267,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .weekday-header { font-size: 0.7rem; }
   .month-header h2 { font-size: 1.1rem; }
 }
-
 @media (max-width: 480px) {
   .day-cell { min-height: 48px; }
   .day-event-item { font-size: 0.5rem; }
 }
 
-/* ===== アニメーション ===== */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .month-block { animation: fadeIn 0.3s ease; }
-
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
@@ -561,7 +281,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 </head>
 <body>
 
-<!-- ヘッダー -->
 <header id="app-header">
   <h1>📅 カレンダー</h1>
   <div class="header-actions">
@@ -570,10 +289,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </header>
 
-<!-- メインレイアウト -->
 <div id="main-layout">
   <div id="calendar-container"></div>
-
   <div id="detail-panel" class="hidden">
     <div class="panel-header">
       <h2 id="detail-date-title"></h2>
@@ -590,7 +307,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 <div id="panel-overlay"></div>
 
-<!-- 予定追加/編集モーダル -->
+<!-- 予定モーダル -->
 <div id="event-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -598,6 +315,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <button id="btn-close-modal" class="close-btn">✕</button>
     </div>
     <form id="event-form">
+      <div class="form-group" id="edit-date-group" style="display:none">
+        <label>日付</label>
+        <input type="date" id="event-date">
+      </div>
       <div class="form-group">
         <label>時間（空欄可）</label>
         <input type="time" id="event-time">
@@ -622,7 +343,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </div>
       </div>
 
-      <!-- 繰り返し設定 -->
       <div class="form-group" id="recurrence-group">
         <label>繰り返し</label>
         <select id="recurrence-type">
@@ -634,7 +354,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </select>
       </div>
 
-      <!-- N週間ごと設定 -->
       <div id="weekly-options" class="recurrence-options hidden">
         <div class="interval-row">
           <span>繰り返し間隔:</span>
@@ -657,37 +376,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             <button type="button" class="weekday-btn" data-day="6">土</button>
           </div>
         </div>
-        <div class="form-group">
-          <label>終了日</label>
-          <input type="date" id="recurrence-end-date">
-        </div>
+        <div class="form-group"><label>終了日</label><input type="date" id="recurrence-end-date"></div>
       </div>
 
-      <!-- 毎月何日設定 -->
       <div id="monthly-options" class="recurrence-options hidden">
-        <div class="monthly-day-row">
-          <span>毎月</span>
-          <select id="monthly-day"></select>
-          <span>日</span>
-        </div>
-        <div class="form-group">
-          <label>終了日</label>
-          <input type="date" id="monthly-end-date">
-        </div>
+        <div class="monthly-day-row"><span>毎月</span><select id="monthly-day"></select><span>日</span></div>
+        <div class="form-group"><label>終了日</label><input type="date" id="monthly-end-date"></div>
       </div>
 
-      <!-- 第N曜日設定 -->
       <div id="nth-weekday-options" class="recurrence-options hidden">
         <div class="form-group">
           <label>曜日</label>
           <select id="nth-weekday-day">
-            <option value="0">日曜日</option>
-            <option value="1">月曜日</option>
-            <option value="2">火曜日</option>
-            <option value="3">水曜日</option>
-            <option value="4">木曜日</option>
-            <option value="5">金曜日</option>
-            <option value="6">土曜日</option>
+            <option value="0">日曜日</option><option value="1">月曜日</option><option value="2">火曜日</option>
+            <option value="3">水曜日</option><option value="4">木曜日</option><option value="5">金曜日</option><option value="6">土曜日</option>
           </select>
         </div>
         <div class="form-group">
@@ -700,13 +402,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             <button type="button" class="nth-btn" data-nth="5">第5</button>
           </div>
         </div>
-        <div class="form-group">
-          <label>終了日</label>
-          <input type="date" id="nth-end-date">
-        </div>
+        <div class="form-group"><label>終了日</label><input type="date" id="nth-end-date"></div>
       </div>
 
-      <!-- カスタム日付選択 -->
       <div id="custom-options" class="recurrence-options hidden">
         <label style="margin-bottom:8px;display:block">カレンダーから日付をタップして選択</label>
         <div class="mini-cal-nav">
@@ -714,9 +412,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <span id="mini-cal-title"></span>
           <button type="button" id="mini-cal-next">▶</button>
         </div>
-        <div class="mini-cal-weekdays">
-          <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
-        </div>
+        <div class="mini-cal-weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
         <div id="mini-cal-grid" class="mini-cal-grid"></div>
         <div id="selected-dates-summary" class="selected-dates-summary" style="display:none">
           <strong>選択中: <span id="selected-count">0</span>日</strong>
@@ -724,13 +420,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </div>
       </div>
 
-      <!-- 編集時の終了日延長 -->
       <div id="extend-end-group" class="form-group" style="display:none">
         <label>繰り返し終了日を変更</label>
         <input type="date" id="extend-end-date">
-        <p style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">
-          終了日を延長すると、新しい予定が追加されます。
-        </p>
+        <p style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">終了日を延長すると、新しい予定が追加されます。</p>
       </div>
 
       <div class="form-actions">
@@ -741,7 +434,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
-<!-- 確認ダイアログ -->
 <div id="confirm-dialog" class="modal hidden">
   <div class="modal-content confirm-content">
     <h3 id="confirm-title">確認</h3>
@@ -750,7 +442,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
-<!-- 同期設定モーダル -->
 <div id="sync-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
@@ -759,22 +450,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     </div>
     <div class="sync-body">
       <p class="sync-description">デバイス間でデータを共有するには、Firebase プロジェクトを設定してください。</p>
-      <div class="form-group">
-        <label>API Key</label>
-        <input type="text" id="fb-apiKey" placeholder="AIza...">
-      </div>
-      <div class="form-group">
-        <label>Auth Domain</label>
-        <input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com">
-      </div>
-      <div class="form-group">
-        <label>Project ID</label>
-        <input type="text" id="fb-projectId" placeholder="your-project-id">
-      </div>
-      <div class="form-group">
-        <label>ユーザーID（共有キー）</label>
-        <input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定">
-      </div>
+      <div class="form-group"><label>API Key</label><input type="text" id="fb-apiKey" placeholder="AIza..."></div>
+      <div class="form-group"><label>Auth Domain</label><input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com"></div>
+      <div class="form-group"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="your-project-id"></div>
+      <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
       <div class="form-actions">
         <button id="btn-save-sync" class="primary-btn">保存して接続</button>
         <button id="btn-disconnect-sync" class="secondary-btn">切断</button>
@@ -792,11 +471,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 </div>
 
 <script>
-// ===== カレンダーアプリ メインJS =====
 (() => {
   'use strict';
 
-  const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+  const WEEKDAYS = ['日','月','火','水','木','金','土'];
   const STORAGE_KEY = 'calendar_events';
   const SYNC_CONFIG_KEY = 'calendar_sync_config';
   const LAST_MODIFIED_KEY = 'calendar_last_modified';
@@ -813,7 +491,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let isSyncingFromFirebase = false;
   let initialLoadDone = false;
 
-  // ===== 毎月日セレクタ初期化 =====
+  // 毎月日セレクタ初期化
   const monthlyDaySelect = document.getElementById('monthly-day');
   for (let d = 1; d <= 31; d++) {
     const opt = document.createElement('option');
@@ -821,993 +499,494 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     monthlyDaySelect.appendChild(opt);
   }
 
-  // ===== 10年後のデフォルト終了日 =====
   function getDefaultEndDate() {
     const d = new Date();
     d.setFullYear(d.getFullYear() + 10);
     return dateToKey(d);
   }
 
-  // ===== 日本の祝日計算 =====
+  // ===== 日本の祝日 =====
   const holidayCache = {};
-
   function getHolidays(year) {
     if (holidayCache[year]) return holidayCache[year];
     const holidays = {};
-
-    function add(m, d, name) {
-      holidays[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name;
-    }
-
-    function nthMonday(month, n) {
-      const first = new Date(year, month-1, 1);
-      let dow = first.getDay();
-      let firstMon = dow <= 1 ? (1 + (1 - dow)) : (1 + (8 - dow));
-      return firstMon + (n-1) * 7;
-    }
-
-    add(1,1,'元日');
-    add(1, nthMonday(1,2), '成人の日');
-    add(2,11,'建国記念の日');
-    add(2,23,'天皇誕生日');
-    const spring = Math.floor(20.8431 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
-    add(3, spring, '春分の日');
-    add(4,29,'昭和の日');
-    add(5,3,'憲法記念日');
-    add(5,4,'みどりの日');
-    add(5,5,'こどもの日');
-    add(7, nthMonday(7,3), '海の日');
-    add(8,11,'山の日');
-    add(9, nthMonday(9,3), '敬老の日');
-    const autumn = Math.floor(23.2488 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
-    add(9, autumn, '秋分の日');
-    add(10, nthMonday(10,2), 'スポーツの日');
-    add(11,3,'文化の日');
-    add(11,23,'勤労感謝の日');
-
-    // 振替休日
-    const sorted = Object.keys(holidays).sort();
-    for (const key of sorted) {
-      const d = new Date(key + 'T00:00:00');
-      if (d.getDay() === 0) {
-        let sub = new Date(d);
-        sub.setDate(sub.getDate() + 1);
-        while (holidays[dateToKey(sub)]) sub.setDate(sub.getDate() + 1);
-        holidays[dateToKey(sub)] = '振替休日';
-      }
-    }
-
-    // 国民の休日
-    const allKeys = Object.keys(holidays).sort();
-    for (let i = 0; i < allKeys.length - 1; i++) {
-      const d1 = new Date(allKeys[i] + 'T00:00:00');
-      const d2 = new Date(allKeys[i+1] + 'T00:00:00');
-      if ((d2 - d1) / 86400000 === 2) {
-        const between = new Date(d1);
-        between.setDate(between.getDate() + 1);
-        const bKey = dateToKey(between);
-        if (!holidays[bKey] && between.getDay() !== 0) {
-          holidays[bKey] = '国民の休日';
-        }
-      }
-    }
-
-    holidayCache[year] = holidays;
-    return holidays;
+    function add(m,d,name) { holidays[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name; }
+    function nthMon(month,n) { const f=new Date(year,month-1,1); let dow=f.getDay(); let fm=dow<=1?(1+(1-dow)):(1+(8-dow)); return fm+(n-1)*7; }
+    add(1,1,'元日'); add(1,nthMon(1,2),'成人の日'); add(2,11,'建国記念の日'); add(2,23,'天皇誕生日');
+    const sp=Math.floor(20.8431+0.242194*(year-1980))-Math.floor((year-1980)/4); add(3,sp,'春分の日');
+    add(4,29,'昭和の日'); add(5,3,'憲法記念日'); add(5,4,'みどりの日'); add(5,5,'こどもの日');
+    add(7,nthMon(7,3),'海の日'); add(8,11,'山の日'); add(9,nthMon(9,3),'敬老の日');
+    const au=Math.floor(23.2488+0.242194*(year-1980))-Math.floor((year-1980)/4); add(9,au,'秋分の日');
+    add(10,nthMon(10,2),'スポーツの日'); add(11,3,'文化の日'); add(11,23,'勤労感謝の日');
+    const sorted=Object.keys(holidays).sort();
+    for(const key of sorted){const d=new Date(key+'T00:00:00');if(d.getDay()===0){let sub=new Date(d);sub.setDate(sub.getDate()+1);while(holidays[dateToKey(sub)])sub.setDate(sub.getDate()+1);holidays[dateToKey(sub)]='振替休日';}}
+    const allKeys=Object.keys(holidays).sort();
+    for(let i=0;i<allKeys.length-1;i++){const d1=new Date(allKeys[i]+'T00:00:00');const d2=new Date(allKeys[i+1]+'T00:00:00');if((d2-d1)/86400000===2){const between=new Date(d1);between.setDate(between.getDate()+1);const bKey=dateToKey(between);if(!holidays[bKey]&&between.getDay()!==0)holidays[bKey]='国民の休日';}}
+    holidayCache[year]=holidays; return holidays;
   }
 
   // ===== ユーティリティ =====
-  function dateToKey(date) {
-    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-  }
-
+  function dateToKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; }
   const todayKey = dateToKey(new Date());
-  function isToday(dateKey) { return dateKey === todayKey; }
-
-  function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2,9);
-  }
-
-  function formatDateJP(dateKey) {
-    const d = new Date(dateKey + 'T00:00:00');
-    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`;
-  }
-
-  function formatDateShort(dateKey) {
-    const d = new Date(dateKey + 'T00:00:00');
-    return `${d.getMonth()+1}/${d.getDate()}`;
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
+  function isToday(dk) { return dk === todayKey; }
+  function generateId() { return Date.now().toString(36)+Math.random().toString(36).substr(2,9); }
+  function formatDateJP(dk) { const d=new Date(dk+'T00:00:00'); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`; }
+  function formatDateShort(dk) { const d=new Date(dk+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
+  function escapeHtml(text) { const div=document.createElement('div'); div.textContent=text; return div.innerHTML; }
   function getNow() { return new Date().toISOString(); }
 
-  // ===== 3ヶ月以上前の予定を自動削除 =====
+  // ===== 古い予定の自動削除 =====
   function cleanupOldEvents() {
-    const lastCleanup = localStorage.getItem(CLEANUP_KEY);
-    const now = new Date();
-
-    // 最後のクリーンアップから7日以内ならスキップ
-    if (lastCleanup) {
-      const lastDate = new Date(lastCleanup);
-      if ((now - lastDate) / 86400000 < 7) return;
-    }
-
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - 3);
-    const cutoffKey = dateToKey(cutoff);
-
-    let changed = false;
-    const keys = Object.keys(events);
-    for (let i = 0; i < keys.length; i++) {
-      if (keys[i] < cutoffKey) {
-        delete events[keys[i]];
-        changed = true;
-      }
-    }
-
-    localStorage.setItem(CLEANUP_KEY, now.toISOString());
-
-    if (changed) {
-      saveEvents();
-    }
+    const last=localStorage.getItem(CLEANUP_KEY); const now=new Date();
+    if(last){if((now-new Date(last))/86400000<7) return;}
+    const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-3); const cutoffKey=dateToKey(cutoff);
+    let changed=false; const keys=Object.keys(events);
+    for(let i=0;i<keys.length;i++){if(keys[i]<cutoffKey){delete events[keys[i]]; changed=true;}}
+    localStorage.setItem(CLEANUP_KEY,now.toISOString());
+    if(changed) saveEvents();
   }
 
   // ===== ストレージ =====
-  function loadEvents() {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      events = data ? JSON.parse(data) : {};
-    } catch { events = {}; }
-  }
-
+  function loadEvents() { try{const d=localStorage.getItem(STORAGE_KEY); events=d?JSON.parse(d):{};}catch{events={};} }
   function saveEvents() {
-    const now = getNow();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-    localStorage.setItem(LAST_MODIFIED_KEY, now);
-    if (!isSyncingFromFirebase) syncToFirebase(now);
+    const now=getNow();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+    localStorage.setItem(LAST_MODIFIED_KEY,now);
+    if(!isSyncingFromFirebase) syncToFirebase(now);
   }
+  function addEvent(dk,ev) { if(!events[dk]) events[dk]=[]; events[dk].push(ev); }
+  function updateEvent(dk,id,updates) { if(!events[dk])return; const idx=events[dk].findIndex(e=>e.id===id); if(idx!==-1) Object.assign(events[dk][idx],updates); }
+  function deleteEvent(dk,id) { if(!events[dk])return; events[dk]=events[dk].filter(e=>e.id!==id); if(events[dk].length===0) delete events[dk]; }
+  function deleteEventsByGroupId(gid) { const keys=Object.keys(events); for(let i=0;i<keys.length;i++){events[keys[i]]=events[keys[i]].filter(e=>e.groupId!==gid); if(events[keys[i]].length===0) delete events[keys[i]];} }
+  function getEventsForDate(dk) { const evs=events[dk]; if(!evs||evs.length===0)return[]; return evs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')); }
 
-  function addEvent(dateKey, event) {
-    if (!events[dateKey]) events[dateKey] = [];
-    events[dateKey].push(event);
-  }
-
-  function updateEvent(dateKey, eventId, updates) {
-    if (!events[dateKey]) return;
-    const idx = events[dateKey].findIndex(e => e.id === eventId);
-    if (idx !== -1) Object.assign(events[dateKey][idx], updates);
-  }
-
-  function deleteEvent(dateKey, eventId) {
-    if (!events[dateKey]) return;
-    events[dateKey] = events[dateKey].filter(e => e.id !== eventId);
-    if (events[dateKey].length === 0) delete events[dateKey];
-  }
-
-  function deleteEventsByGroupId(groupId) {
-    const keys = Object.keys(events);
-    for (let i = 0; i < keys.length; i++) {
-      events[keys[i]] = events[keys[i]].filter(e => e.groupId !== groupId);
-      if (events[keys[i]].length === 0) delete events[keys[i]];
-    }
-  }
-
-  function getEventsForDate(dateKey) {
-    const evs = events[dateKey];
-    if (!evs || evs.length === 0) return [];
-    return evs.slice().sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+  // 予定を別の日に移動
+  function moveEvent(fromDk, toDk, eventId) {
+    if(fromDk===toDk) return;
+    if(!events[fromDk]) return;
+    const idx=events[fromDk].findIndex(e=>e.id===eventId);
+    if(idx===-1) return;
+    const ev=events[fromDk].splice(idx,1)[0];
+    if(events[fromDk].length===0) delete events[fromDk];
+    if(!events[toDk]) events[toDk]=[];
+    events[toDk].push(ev);
   }
 
   // ===== Firebase同期 =====
-  function loadSyncConfig() {
-    try { return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY)); }
-    catch { return null; }
-  }
-
+  function loadSyncConfig() { try{return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY));}catch{return null;} }
   async function initFirebase() {
-    const config = loadSyncConfig();
-    if (!config || !config.apiKey || !config.projectId || !config.userId) return;
+    const config=loadSyncConfig();
+    if(!config||!config.apiKey||!config.projectId||!config.userId) return;
     try {
-      if (!window.firebase) {
+      if(!window.firebase){
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
       }
-      if (!firebase.apps.length) {
-        firebase.initializeApp({ apiKey: config.apiKey, authDomain: config.authDomain||'', projectId: config.projectId });
-      }
-      firebaseDb = firebase.firestore();
-      if (firebaseUnsubscribe) firebaseUnsubscribe();
-      initialLoadDone = false;
-
-      firebaseUnsubscribe = firebaseDb.collection('calendars').doc(config.userId)
-        .onSnapshot((doc) => {
-          if (doc.exists) {
-            const remoteData = doc.data();
-            const remoteUpdatedAt = remoteData.updatedAt || '';
-            const localUpdatedAt = localStorage.getItem(LAST_MODIFIED_KEY) || '';
-
-            if (!initialLoadDone) {
-              initialLoadDone = true;
-              const remoteEvents = remoteData.events || {};
-              mergeEvents(remoteEvents);
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-              if (remoteUpdatedAt > localUpdatedAt) {
-                localStorage.setItem(LAST_MODIFIED_KEY, remoteUpdatedAt);
-              }
-              renderAllMonths();
-              if (selectedDate) renderDetailPanel(selectedDate);
+      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId});
+      firebaseDb=firebase.firestore();
+      if(firebaseUnsubscribe) firebaseUnsubscribe();
+      initialLoadDone=false;
+      firebaseUnsubscribe=firebaseDb.collection('calendars').doc(config.userId)
+        .onSnapshot((doc)=>{
+          if(doc.exists){
+            const rd=doc.data(); const rUpd=rd.updatedAt||''; const lUpd=localStorage.getItem(LAST_MODIFIED_KEY)||'';
+            if(!initialLoadDone){
+              initialLoadDone=true; mergeEvents(rd.events||{});
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+              if(rUpd>lUpd) localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               syncToFirebase(getNow());
             } else {
-              isSyncingFromFirebase = true;
-              events = remoteData.events || {};
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-              localStorage.setItem(LAST_MODIFIED_KEY, remoteUpdatedAt);
-              renderAllMonths();
-              if (selectedDate) renderDetailPanel(selectedDate);
-              isSyncingFromFirebase = false;
+              isSyncingFromFirebase=true; events=rd.events||{};
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+              isSyncingFromFirebase=false;
             }
-          } else {
-            initialLoadDone = true;
-            syncToFirebase(getNow());
-          }
+          } else { initialLoadDone=true; syncToFirebase(getNow()); }
         });
-      updateSyncStatus('connected', '接続中 ✓');
-    } catch (err) {
-      console.error('Firebase init error:', err);
-      updateSyncStatus('error', 'エラー: ' + err.message);
-    }
+      updateSyncStatus('connected','接続中 ✓');
+    } catch(err){ console.error('Firebase init error:',err); updateSyncStatus('error','エラー: '+err.message); }
   }
+  function mergeEvents(re) { for(const dk of Object.keys(re)){if(!events[dk]){events[dk]=re[dk];}else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id))events[dk].push(r);}}} }
+  function syncToFirebase(ts) { const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return; firebaseDb.collection('calendars').doc(c.userId).set({events,updatedAt:ts||getNow()},{merge:true}).catch(err=>console.error('Sync error:',err)); }
+  function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
+  function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
 
-  function mergeEvents(remoteEvents) {
-    for (const dateKey of Object.keys(remoteEvents)) {
-      if (!events[dateKey]) {
-        events[dateKey] = remoteEvents[dateKey];
-      } else {
-        const localIds = new Set(events[dateKey].map(e => e.id));
-        for (const remoteEv of remoteEvents[dateKey]) {
-          if (!localIds.has(remoteEv.id)) events[dateKey].push(remoteEv);
-        }
-      }
-    }
-  }
-
-  function syncToFirebase(timestamp) {
-    const config = loadSyncConfig();
-    if (!firebaseDb || !config?.userId) return;
-    firebaseDb.collection('calendars').doc(config.userId).set(
-      { events, updatedAt: timestamp || getNow() }, { merge: true }
-    ).catch(err => console.error('Sync error:', err));
-  }
-
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = src; s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-  }
-
-  function updateSyncStatus(type, message) {
-    const el = document.getElementById('sync-status');
-    el.className = 'sync-status ' + type;
-    el.textContent = message;
-  }
-
-  // ===== カレンダー描画（パフォーマンス最適化） =====
+  // ===== カレンダー描画 =====
   function renderAllMonths() {
-    const container = document.getElementById('calendar-container');
-    const frag = document.createDocumentFragment();
-    for (let offset = 0; offset < 2; offset++) {
-      const month = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + offset, 1);
-      frag.appendChild(renderMonth(month, offset === 0));
-    }
-    container.innerHTML = '';
-    container.appendChild(frag);
+    const c=document.getElementById('calendar-container');
+    const f=document.createDocumentFragment();
+    for(let o=0;o<2;o++){const m=new Date(baseMonth.getFullYear(),baseMonth.getMonth()+o,1); f.appendChild(renderMonth(m,o===0));}
+    c.innerHTML=''; c.appendChild(f);
   }
 
-  function renderMonth(monthDate, showNav) {
-    const year = monthDate.getFullYear();
-    const month = monthDate.getMonth();
-    const holidays = getHolidays(year);
-    if (month === 11) getHolidays(year + 1);
-
-    const block = document.createElement('div');
-    block.className = 'month-block';
-
-    // ヘッダー
-    const header = document.createElement('div');
-    header.className = 'month-header';
-    header.innerHTML = `<h2>${year}年 ${month+1}月</h2>${showNav ? '<div class="month-nav"><button id="btn-prev-month">◀</button><button id="btn-next-month">▶</button></div>' : ''}`;
+  function renderMonth(monthDate,showNav) {
+    const year=monthDate.getFullYear(), month=monthDate.getMonth();
+    const holidays=getHolidays(year); if(month===11) getHolidays(year+1);
+    const block=document.createElement('div'); block.className='month-block';
+    const header=document.createElement('div'); header.className='month-header';
+    header.innerHTML=`<h2>${year}年 ${month+1}月</h2>${showNav?'<div class="month-nav"><button id="btn-prev-month">◀</button><button id="btn-next-month">▶</button></div>':''}`;
     block.appendChild(header);
-
-    // 曜日
-    const wh = document.createElement('div');
-    wh.className = 'weekday-header';
-    for (let i = 0; i < 7; i++) {
-      const s = document.createElement('span');
-      s.textContent = WEEKDAYS[i];
-      wh.appendChild(s);
-    }
+    const wh=document.createElement('div'); wh.className='weekday-header';
+    for(let i=0;i<7;i++){const s=document.createElement('span');s.textContent=WEEKDAYS[i];wh.appendChild(s);}
     block.appendChild(wh);
-
-    // グリッド
-    const grid = document.createElement('div');
-    grid.className = 'month-grid';
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-
-    // 空セル
-    for (let i = 0; i < firstDay; i++) {
-      const c = document.createElement('div');
-      c.className = 'day-cell empty';
-      grid.appendChild(c);
-    }
-
-    // 日セル
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const dow = new Date(year, month, day).getDay();
-      const holidayName = holidays[dateKey];
-
-      const cell = document.createElement('div');
-      let cls = 'day-cell';
-      if (dow === 0) cls += ' sunday';
-      if (dow === 6) cls += ' saturday';
-      if (holidayName) cls += ' holiday';
-      if (isToday(dateKey)) cls += ' today';
-      if (selectedDate === dateKey) cls += ' selected-day';
-      cell.className = cls;
-
-      const numEl = document.createElement('div');
-      numEl.className = 'day-number';
-      numEl.textContent = day;
-      cell.appendChild(numEl);
-
-      if (holidayName) {
-        const hEl = document.createElement('div');
-        hEl.className = 'holiday-name';
-        hEl.textContent = holidayName;
-        cell.appendChild(hEl);
-      }
-
-      const dayEvents = getEventsForDate(dateKey);
-      if (dayEvents.length > 0) {
-        const ec = document.createElement('div');
-        ec.className = 'day-events';
-        for (let i = 0; i < dayEvents.length; i++) {
-          const ev = dayEvents[i];
-          const e = document.createElement('div');
-          e.className = `day-event-item color-${ev.colorIndex}`;
-          e.textContent = (ev.time ? ev.time + ' ' : '') + (ev.title || '（無題）');
+    const grid=document.createElement('div'); grid.className='month-grid';
+    const firstDay=new Date(year,month,1).getDay();
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    for(let i=0;i<firstDay;i++){const c=document.createElement('div');c.className='day-cell empty';grid.appendChild(c);}
+    for(let day=1;day<=daysInMonth;day++){
+      const dk=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dow=new Date(year,month,day).getDay(); const hol=holidays[dk];
+      const cell=document.createElement('div');
+      let cls='day-cell'; if(dow===0)cls+=' sunday'; if(dow===6)cls+=' saturday'; if(hol)cls+=' holiday'; if(isToday(dk))cls+=' today'; if(selectedDate===dk)cls+=' selected-day';
+      cell.className=cls;
+      const numEl=document.createElement('div'); numEl.className='day-number'; numEl.textContent=day; cell.appendChild(numEl);
+      if(hol){const hEl=document.createElement('div');hEl.className='holiday-name';hEl.textContent=hol;cell.appendChild(hEl);}
+      const dayEvs=getEventsForDate(dk);
+      if(dayEvs.length>0){
+        const ec=document.createElement('div'); ec.className='day-events';
+        for(let i=0;i<dayEvs.length;i++){
+          const ev=dayEvs[i]; const e=document.createElement('div');
+          e.className=`day-event-item color-${ev.colorIndex}${ev.done?' done-item':''}`;
+          e.textContent=(ev.time?ev.time+' ':'')+(ev.title||'（無題）');
           ec.appendChild(e);
         }
         cell.appendChild(ec);
       }
-
-      cell.dataset.date = dateKey;
-      grid.appendChild(cell);
+      cell.dataset.date=dk; grid.appendChild(cell);
     }
-
-    block.appendChild(grid);
-    return block;
+    block.appendChild(grid); return block;
   }
 
   // ===== イベントデリゲーション =====
-  document.getElementById('calendar-container').addEventListener('click', (e) => {
-    if (e.target.id === 'btn-prev-month') { baseMonth.setMonth(baseMonth.getMonth()-1); renderAllMonths(); return; }
-    if (e.target.id === 'btn-next-month') { baseMonth.setMonth(baseMonth.getMonth()+1); renderAllMonths(); return; }
-    const cell = e.target.closest('.day-cell:not(.empty)');
-    if (cell && cell.dataset.date) openDetailPanel(cell.dataset.date);
+  document.getElementById('calendar-container').addEventListener('click',(e)=>{
+    if(e.target.id==='btn-prev-month'){baseMonth.setMonth(baseMonth.getMonth()-1);renderAllMonths();return;}
+    if(e.target.id==='btn-next-month'){baseMonth.setMonth(baseMonth.getMonth()+1);renderAllMonths();return;}
+    const cell=e.target.closest('.day-cell:not(.empty)');
+    if(cell&&cell.dataset.date) openDetailPanel(cell.dataset.date);
   });
-
-  document.getElementById('btn-today').addEventListener('click', () => {
-    baseMonth = new Date(); renderAllMonths();
-  });
+  document.getElementById('btn-today').addEventListener('click',()=>{baseMonth=new Date();renderAllMonths();});
 
   // ===== 詳細パネル =====
-  function openDetailPanel(dateKey) {
-    selectedDate = dateKey;
-    renderDetailPanel(dateKey);
-    const panel = document.getElementById('detail-panel');
-    if (panel.classList.contains('hidden')) {
-      panel.classList.remove('hidden');
-      if (window.innerWidth <= 768) document.getElementById('panel-overlay').classList.add('active');
-    }
+  function openDetailPanel(dk) {
+    selectedDate=dk; renderDetailPanel(dk);
+    const panel=document.getElementById('detail-panel');
+    if(panel.classList.contains('hidden')){panel.classList.remove('hidden'); if(window.innerWidth<=768) document.getElementById('panel-overlay').classList.add('active');}
     renderAllMonths();
   }
+  function closeDetailPanel() { document.getElementById('detail-panel').classList.add('hidden'); selectedDate=null; document.getElementById('panel-overlay').classList.remove('active'); renderAllMonths(); }
 
-  function closeDetailPanel() {
-    document.getElementById('detail-panel').classList.add('hidden');
-    selectedDate = null;
-    document.getElementById('panel-overlay').classList.remove('active');
-    renderAllMonths();
-  }
-
-  function renderDetailPanel(dateKey) {
-    document.getElementById('detail-date-title').textContent = formatDateJP(dateKey);
-    const list = document.getElementById('detail-events-list');
-    const dayEvents = getEventsForDate(dateKey);
-
-    if (dayEvents.length === 0) {
-      list.innerHTML = '<div class="detail-no-events">予定はありません</div>';
-      return;
-    }
-
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < dayEvents.length; i++) {
-      const ev = dayEvents[i];
-      const card = document.createElement('div');
-      card.className = `detail-event-card color-${ev.colorIndex}`;
-
-      let html = '';
-      if (ev.time) {
-        html += `<div class="detail-event-time">${ev.time}</div>`;
-      } else {
-        html += '<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';
-      }
-      html += `<div class="detail-event-title">${escapeHtml(ev.title || '（無題）')}</div>`;
-      if (ev.detail) {
-        html += `<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;
-      }
-      html += `<div class="detail-event-actions">
+  function renderDetailPanel(dk) {
+    document.getElementById('detail-date-title').textContent=formatDateJP(dk);
+    const list=document.getElementById('detail-events-list');
+    const dayEvs=getEventsForDate(dk);
+    if(dayEvs.length===0){list.innerHTML='<div class="detail-no-events">予定はありません</div>';return;}
+    const frag=document.createDocumentFragment();
+    for(let i=0;i<dayEvs.length;i++){
+      const ev=dayEvs[i];
+      const card=document.createElement('div');
+      card.className=`detail-event-card color-${ev.colorIndex}${ev.done?' done-card':''}`;
+      let html='';
+      if(ev.time){html+=`<div class="detail-event-time">${ev.time}</div>`;}
+      else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
+      html+=`<div class="detail-event-title">${escapeHtml(ev.title||'（無題）')}</div>`;
+      if(ev.detail){html+=`<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;}
+      // ボタン
+      const doneLabel=ev.done?'↩ 戻す':'✅ 済';
+      const doneClass=ev.done?'undone-btn':'done-btn';
+      html+=`<div class="detail-event-actions">
+        <button class="${doneClass}" data-id="${ev.id}" data-action="toggle-done">${doneLabel}</button>
         <button class="edit-btn" data-id="${ev.id}">✏️ 編集</button>
-        <button class="delete-btn" data-id="${ev.id}" data-group="${ev.groupId || ''}">🗑️ 削除</button>
+        <button class="delete-btn" data-id="${ev.id}" data-group="${ev.groupId||''}">🗑️ 削除</button>
       </div>`;
-
-      card.innerHTML = html;
+      card.innerHTML=html;
       frag.appendChild(card);
     }
-    list.innerHTML = '';
-    list.appendChild(frag);
+    list.innerHTML=''; list.appendChild(frag);
   }
 
-  document.getElementById('detail-events-list').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('.edit-btn');
-    const deleteBtn = e.target.closest('.delete-btn');
-    if (editBtn) {
-      const ev = (events[selectedDate]||[]).find(x => x.id === editBtn.dataset.id);
-      if (ev) openEditModal(ev);
+  // 詳細パネルのクリックイベント
+  document.getElementById('detail-events-list').addEventListener('click',(e)=>{
+    // 済ボタン
+    const doneBtn=e.target.closest('[data-action="toggle-done"]');
+    if(doneBtn){
+      const evId=doneBtn.dataset.id;
+      const ev=(events[selectedDate]||[]).find(x=>x.id===evId);
+      if(ev) showDoneConfirm(evId,!!ev.done);
+      return;
     }
-    if (deleteBtn) {
-      const gid = deleteBtn.dataset.group;
-      if (gid) showDeleteGroupConfirm(deleteBtn.dataset.id, gid);
-      else showDeleteConfirm(deleteBtn.dataset.id);
-    }
+    const editBtn=e.target.closest('.edit-btn');
+    if(editBtn){const ev=(events[selectedDate]||[]).find(x=>x.id===editBtn.dataset.id);if(ev) openEditModal(ev);return;}
+    const deleteBtn=e.target.closest('.delete-btn');
+    if(deleteBtn){const gid=deleteBtn.dataset.group;if(gid) showDeleteGroupConfirm(deleteBtn.dataset.id,gid);else showDeleteConfirm(deleteBtn.dataset.id);return;}
   });
 
-  document.getElementById('btn-close-detail').addEventListener('click', closeDetailPanel);
-  document.getElementById('btn-add-event').addEventListener('click', openAddModal);
-  document.getElementById('panel-overlay').addEventListener('click', closeDetailPanel);
+  document.getElementById('btn-close-detail').addEventListener('click',closeDetailPanel);
+  document.getElementById('btn-add-event').addEventListener('click',openAddModal);
+  document.getElementById('panel-overlay').addEventListener('click',closeDetailPanel);
+
+  // ===== 済み確認 =====
+  function showDoneConfirm(eventId,isDone) {
+    const dialog=document.getElementById('confirm-dialog');
+    const msg=isDone?'この予定を「未完了」に戻しますか？':'この予定を「済」にしますか？';
+    document.getElementById('confirm-title').textContent=isDone?'未完了に戻す':'予定を完了にする';
+    document.getElementById('confirm-message').textContent=msg;
+    document.getElementById('confirm-actions').innerHTML=
+      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>'+
+      `<button class="primary-btn" id="confirm-ok" style="background:${isDone?'#D97706':'#059669'}">${isDone?'戻す':'済にする'}</button>`;
+    dialog.classList.remove('hidden');
+    document.getElementById('confirm-ok').onclick=()=>{
+      updateEvent(selectedDate,eventId,{done:!isDone}); saveEvents(); dialog.classList.add('hidden');
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
+  }
 
   // ===== 予定モーダル =====
   function openAddModal() {
-    editingEvent = null;
-    document.getElementById('modal-title').textContent = '予定を追加';
+    editingEvent=null;
+    document.getElementById('modal-title').textContent='予定を追加';
     document.getElementById('event-form').reset();
-    document.getElementById('event-time').value = '';
-    document.getElementById('event-title').value = '';
-    customDates = []; renderSelectedDatesChips();
-    resetColorPicker(0); resetRecurrenceUI();
-    setDefaultEndDates();
-    document.getElementById('recurrence-group').style.display = '';
-    document.getElementById('extend-end-group').style.display = 'none';
+    document.getElementById('event-time').value='';
+    document.getElementById('event-title').value='';
+    document.getElementById('edit-date-group').style.display='none';
+    customDates=[]; renderSelectedDatesChips();
+    resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
+    document.getElementById('recurrence-group').style.display='';
+    document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
   }
 
   function openEditModal(ev) {
-    editingEvent = ev;
-    document.getElementById('modal-title').textContent = '予定を編集';
-    document.getElementById('event-time').value = ev.time || '';
-    document.getElementById('event-title').value = ev.title || '';
-    document.getElementById('event-detail').value = ev.detail || '';
+    editingEvent=ev;
+    document.getElementById('modal-title').textContent='予定を編集';
+    // 日付変更フィールド表示
+    document.getElementById('edit-date-group').style.display='';
+    document.getElementById('event-date').value=selectedDate;
+    document.getElementById('event-time').value=ev.time||'';
+    document.getElementById('event-title').value=ev.title||'';
+    document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    document.getElementById('recurrence-type').value = 'none';
+    document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
-
-    // 繰り返し予定の場合、終了日延長を表示
-    if (ev.groupId) {
-      document.getElementById('recurrence-group').style.display = 'none';
-      document.getElementById('extend-end-group').style.display = '';
-      // 現在のグループの最後の日付を取得
-      let lastDate = '';
-      const keys = Object.keys(events);
-      for (let i = 0; i < keys.length; i++) {
-        if (events[keys[i]].some(e => e.groupId === ev.groupId)) {
-          if (keys[i] > lastDate) lastDate = keys[i];
-        }
-      }
-      document.getElementById('extend-end-date').value = lastDate || getDefaultEndDate();
+    // 繰り返し
+    if(ev.groupId){
+      document.getElementById('recurrence-group').style.display='none';
+      document.getElementById('extend-end-group').style.display='';
+      let lastDate=''; const keys=Object.keys(events);
+      for(let i=0;i<keys.length;i++){if(events[keys[i]].some(e=>e.groupId===ev.groupId)){if(keys[i]>lastDate)lastDate=keys[i];}}
+      document.getElementById('extend-end-date').value=lastDate||getDefaultEndDate();
     } else {
-      document.getElementById('recurrence-group').style.display = '';
-      document.getElementById('extend-end-group').style.display = 'none';
+      document.getElementById('recurrence-group').style.display='';
+      document.getElementById('extend-end-group').style.display='none';
     }
-
     document.getElementById('event-modal').classList.remove('hidden');
   }
 
-  function closeModal() {
-    document.getElementById('event-modal').classList.add('hidden');
-    editingEvent = null;
-  }
+  function closeModal() { document.getElementById('event-modal').classList.add('hidden'); editingEvent=null; }
 
   function setDefaultEndDates() {
-    const def = getDefaultEndDate();
-    document.getElementById('recurrence-end-date').value = def;
-    document.getElementById('monthly-end-date').value = def;
-    document.getElementById('nth-end-date').value = def;
+    const def=getDefaultEndDate();
+    document.getElementById('recurrence-end-date').value=def;
+    document.getElementById('monthly-end-date').value=def;
+    document.getElementById('nth-end-date').value=def;
   }
+  function resetColorPicker(idx) { document.querySelectorAll('.color-option').forEach(b=>b.classList.toggle('selected',parseInt(b.dataset.color)===idx)); }
+  function getSelectedColor() { const s=document.querySelector('.color-option.selected'); return s?parseInt(s.dataset.color):0; }
+  function resetRecurrenceUI() { document.querySelectorAll('.recurrence-options').forEach(el=>el.classList.add('hidden')); document.querySelectorAll('.weekday-btn,.nth-btn').forEach(b=>b.classList.remove('active')); document.getElementById('week-interval').value='1'; customDates=[]; renderSelectedDatesChips(); }
 
-  function resetColorPicker(idx) {
-    document.querySelectorAll('.color-option').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.color) === idx));
-  }
+  document.getElementById('color-picker').addEventListener('click',(e)=>{const btn=e.target.closest('.color-option');if(!btn)return;document.querySelectorAll('.color-option').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');});
 
-  function getSelectedColor() {
-    const s = document.querySelector('.color-option.selected');
-    return s ? parseInt(s.dataset.color) : 0;
-  }
-
-  function resetRecurrenceUI() {
-    document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.weekday-btn, .nth-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('week-interval').value = '1';
-    customDates = [];
-    renderSelectedDatesChips();
-  }
-
-  document.getElementById('color-picker').addEventListener('click', (e) => {
-    const btn = e.target.closest('.color-option');
-    if (!btn) return;
-    document.querySelectorAll('.color-option').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
+  document.getElementById('recurrence-type').addEventListener('change',(e)=>{
+    const type=e.target.value;
+    document.querySelectorAll('.recurrence-options').forEach(el=>el.classList.add('hidden'));
+    if(type==='weekly') document.getElementById('weekly-options').classList.remove('hidden');
+    else if(type==='monthly'){document.getElementById('monthly-options').classList.remove('hidden');if(selectedDate){document.getElementById('monthly-day').value=new Date(selectedDate+'T00:00:00').getDate();}}
+    else if(type==='nth-weekday') document.getElementById('nth-weekday-options').classList.remove('hidden');
+    else if(type==='custom'){document.getElementById('custom-options').classList.remove('hidden');miniCalMonth=selectedDate?new Date(selectedDate+'T00:00:00'):new Date();renderMiniCalendar();}
   });
 
-  document.getElementById('recurrence-type').addEventListener('change', (e) => {
-    const type = e.target.value;
-    document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
-    if (type === 'weekly') {
-      document.getElementById('weekly-options').classList.remove('hidden');
-    } else if (type === 'monthly') {
-      document.getElementById('monthly-options').classList.remove('hidden');
-      // 選択中の日を初期値に
-      if (selectedDate) {
-        const d = new Date(selectedDate + 'T00:00:00');
-        document.getElementById('monthly-day').value = d.getDate();
-      }
-    } else if (type === 'nth-weekday') {
-      document.getElementById('nth-weekday-options').classList.remove('hidden');
-    } else if (type === 'custom') {
-      document.getElementById('custom-options').classList.remove('hidden');
-      miniCalMonth = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
-      renderMiniCalendar();
-    }
-  });
-
-  document.querySelectorAll('.weekday-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
-  document.querySelectorAll('.nth-btn').forEach(b => b.addEventListener('click', () => b.classList.toggle('active')));
-
-  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-  document.getElementById('btn-cancel-event').addEventListener('click', closeModal);
+  document.querySelectorAll('.weekday-btn').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('active')));
+  document.querySelectorAll('.nth-btn').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('active')));
+  document.getElementById('btn-close-modal').addEventListener('click',closeModal);
+  document.getElementById('btn-cancel-event').addEventListener('click',closeModal);
 
   // ===== ミニカレンダー =====
   function renderMiniCalendar() {
-    const year = miniCalMonth.getFullYear();
-    const month = miniCalMonth.getMonth();
-
-    document.getElementById('mini-cal-title').textContent = `${year}年 ${month + 1}月`;
-
-    const grid = document.getElementById('mini-cal-grid');
-    const frag = document.createDocumentFragment();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    for (let i = 0; i < firstDay; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'mini-cal-day empty';
-      frag.appendChild(cell);
+    const year=miniCalMonth.getFullYear(),month=miniCalMonth.getMonth();
+    document.getElementById('mini-cal-title').textContent=`${year}年 ${month+1}月`;
+    const grid=document.getElementById('mini-cal-grid'); const frag=document.createDocumentFragment();
+    const firstDay=new Date(year,month,1).getDay(); const dim=new Date(year,month+1,0).getDate();
+    for(let i=0;i<firstDay;i++){const c=document.createElement('div');c.className='mini-cal-day empty';frag.appendChild(c);}
+    for(let day=1;day<=dim;day++){
+      const dk=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dow=new Date(year,month,day).getDay();
+      const c=document.createElement('div'); let cls='mini-cal-day';
+      if(dow===0)cls+=' sun'; if(dow===6)cls+=' sat'; if(customDates.includes(dk))cls+=' checked';
+      c.className=cls; c.textContent=day; c.dataset.date=dk; frag.appendChild(c);
     }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const dow = new Date(year, month, day).getDay();
-
-      const cell = document.createElement('div');
-      let cls = 'mini-cal-day';
-      if (dow === 0) cls += ' sun';
-      if (dow === 6) cls += ' sat';
-      if (customDates.includes(dateKey)) cls += ' checked';
-      cell.className = cls;
-      cell.textContent = day;
-      cell.dataset.date = dateKey;
-      frag.appendChild(cell);
-    }
-
-    grid.innerHTML = '';
-    grid.appendChild(frag);
-    renderSelectedDatesChips();
+    grid.innerHTML=''; grid.appendChild(frag); renderSelectedDatesChips();
   }
-
-  document.getElementById('mini-cal-grid').addEventListener('click', (e) => {
-    const cell = e.target.closest('.mini-cal-day:not(.empty)');
-    if (!cell) return;
-    const dk = cell.dataset.date;
-    const idx = customDates.indexOf(dk);
-    if (idx === -1) { customDates.push(dk); customDates.sort(); }
-    else { customDates.splice(idx, 1); }
-    cell.classList.toggle('checked');
-    renderSelectedDatesChips();
+  document.getElementById('mini-cal-grid').addEventListener('click',(e)=>{
+    const cell=e.target.closest('.mini-cal-day:not(.empty)');if(!cell)return;
+    const dk=cell.dataset.date; const idx=customDates.indexOf(dk);
+    if(idx===-1){customDates.push(dk);customDates.sort();}else{customDates.splice(idx,1);}
+    cell.classList.toggle('checked'); renderSelectedDatesChips();
   });
-
   function renderSelectedDatesChips() {
-    const summary = document.getElementById('selected-dates-summary');
-    const chips = document.getElementById('selected-dates-chips');
-    const count = document.getElementById('selected-count');
-    if (!summary || !chips || !count) return;
-
-    if (customDates.length === 0) { summary.style.display = 'none'; return; }
-
-    summary.style.display = 'block';
-    count.textContent = customDates.length;
-
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < customDates.length; i++) {
-      const chip = document.createElement('span');
-      chip.className = 'date-chip';
-      chip.innerHTML = `${formatDateShort(customDates[i])} <button data-date="${customDates[i]}">✕</button>`;
-      frag.appendChild(chip);
-    }
-    chips.innerHTML = '';
-    chips.appendChild(frag);
+    const summary=document.getElementById('selected-dates-summary'),chips=document.getElementById('selected-dates-chips'),count=document.getElementById('selected-count');
+    if(!summary||!chips||!count)return; if(customDates.length===0){summary.style.display='none';return;}
+    summary.style.display='block'; count.textContent=customDates.length;
+    const frag=document.createDocumentFragment();
+    for(let i=0;i<customDates.length;i++){const chip=document.createElement('span');chip.className='date-chip';chip.innerHTML=`${formatDateShort(customDates[i])} <button data-date="${customDates[i]}">✕</button>`;frag.appendChild(chip);}
+    chips.innerHTML=''; chips.appendChild(frag);
   }
-
-  document.getElementById('selected-dates-chips')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (btn && btn.dataset.date) {
-      customDates = customDates.filter(d => d !== btn.dataset.date);
-      renderMiniCalendar();
-    }
-  });
-
-  document.getElementById('mini-cal-prev').addEventListener('click', () => {
-    miniCalMonth.setMonth(miniCalMonth.getMonth() - 1);
-    renderMiniCalendar();
-  });
-
-  document.getElementById('mini-cal-next').addEventListener('click', () => {
-    miniCalMonth.setMonth(miniCalMonth.getMonth() + 1);
-    renderMiniCalendar();
-  });
+  document.getElementById('selected-dates-chips')?.addEventListener('click',(e)=>{const btn=e.target.closest('button');if(btn&&btn.dataset.date){customDates=customDates.filter(d=>d!==btn.dataset.date);renderMiniCalendar();}});
+  document.getElementById('mini-cal-prev').addEventListener('click',()=>{miniCalMonth.setMonth(miniCalMonth.getMonth()-1);renderMiniCalendar();});
+  document.getElementById('mini-cal-next').addEventListener('click',()=>{miniCalMonth.setMonth(miniCalMonth.getMonth()+1);renderMiniCalendar();});
 
   // ===== フォーム送信 =====
-  document.getElementById('event-form').addEventListener('submit', (e) => {
+  document.getElementById('event-form').addEventListener('submit',(e)=>{
     e.preventDefault();
-    const time = document.getElementById('event-time').value || '';
-    const title = document.getElementById('event-title').value.trim();
-    const detail = document.getElementById('event-detail').value.trim();
-    const colorIndex = getSelectedColor();
-    const recurrenceType = document.getElementById('recurrence-type').value;
+    const time=document.getElementById('event-time').value||'';
+    const title=document.getElementById('event-title').value.trim();
+    const detail=document.getElementById('event-detail').value.trim();
+    const colorIndex=getSelectedColor();
+    const recurrenceType=document.getElementById('recurrence-type').value;
 
-    // 編集モード
-    if (editingEvent) {
-      updateEvent(selectedDate, editingEvent.id, { time, title, detail, colorIndex });
+    if(editingEvent){
+      const newDate=document.getElementById('event-date').value;
+      const updates={time,title,detail,colorIndex};
 
-      // 繰り返し予定の終了日延長
-      if (editingEvent.groupId && document.getElementById('extend-end-group').style.display !== 'none') {
-        const newEndDate = document.getElementById('extend-end-date').value;
-        if (newEndDate && editingEvent.recurrenceInfo) {
-          extendRecurringEvents(editingEvent, newEndDate);
-        }
+      // 日付変更
+      if(newDate&&newDate!==selectedDate){
+        moveEvent(selectedDate,newDate,editingEvent.id);
+        updateEvent(newDate,editingEvent.id,updates);
+      } else {
+        updateEvent(selectedDate,editingEvent.id,updates);
       }
-
-      saveEvents();
-      closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+      // 繰り返し終了日延長
+      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
+        const newEnd=document.getElementById('extend-end-date').value;
+        if(newEnd&&editingEvent.recurrenceInfo) extendRecurringEvents(editingEvent,newEnd);
+      }
+      saveEvents(); closeModal();
+      if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
+      renderDetailPanel(selectedDate); renderAllMonths();
       return;
     }
 
-    // 新規作成
-    if (recurrenceType === 'none') {
-      addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
+    if(recurrenceType==='none'){
+      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex});
     } else {
-      const result = generateRecurringDates(recurrenceType, selectedDate);
-      const dates = result.dates;
-      const recurrenceInfo = result.info;
-
-      if (dates.length === 0) {
-        addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
-      } else {
-        const groupId = generateId();
-        for (let i = 0; i < dates.length; i++) {
-          addEvent(dates[i], { id: generateId(), groupId, time, title, detail, colorIndex, recurrenceInfo });
-        }
-      }
+      const result=generateRecurringDates(recurrenceType,selectedDate);
+      const dates=result.dates; const recurrenceInfo=result.info;
+      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex});}
+      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo});}}
     }
-
-    saveEvents();
-    closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+    saveEvents(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
   // ===== 繰り返し終了日の延長 =====
-  function extendRecurringEvents(ev, newEndDate) {
-    const info = ev.recurrenceInfo;
-    if (!info) return;
-
-    // 現在のグループの最後の日付を取得
-    let lastDate = '';
-    const keys = Object.keys(events);
-    for (let i = 0; i < keys.length; i++) {
-      if (events[keys[i]].some(e => e.groupId === ev.groupId)) {
-        if (keys[i] > lastDate) lastDate = keys[i];
-      }
-    }
-
-    if (!lastDate || newEndDate <= lastDate) return;
-
-    // lastDateの翌日から新しい終了日までの日付を生成
-    const startDate = new Date(lastDate + 'T00:00:00');
-    startDate.setDate(startDate.getDate() + 1);
-    const endDate = new Date(newEndDate + 'T23:59:59');
-
-    let newDates = [];
-
-    if (info.type === 'weekly') {
-      let cur = new Date(startDate);
-      cur.setDate(cur.getDate() - cur.getDay());
-      while (cur <= endDate) {
-        for (const dow of (info.days || [])) {
-          const t = new Date(cur);
-          t.setDate(t.getDate() + dow);
-          if (t >= startDate && t <= endDate) newDates.push(dateToKey(t));
-        }
-        cur.setDate(cur.getDate() + 7 * (info.interval || 1));
-      }
-    } else if (info.type === 'monthly') {
-      const dayOfMonth = info.dayOfMonth;
-      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      while (cur <= endDate) {
-        const dim = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
-        const actualDay = Math.min(dayOfMonth, dim);
-        const target = new Date(cur.getFullYear(), cur.getMonth(), actualDay);
-        if (target >= startDate && target <= endDate) newDates.push(dateToKey(target));
-        cur.setMonth(cur.getMonth() + 1);
-      }
-    } else if (info.type === 'nth-weekday') {
-      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      while (cur <= endDate) {
-        for (const nth of (info.nths || [])) {
-          const d = getNthWeekday(cur.getFullYear(), cur.getMonth(), info.dow, nth);
-          if (d && d >= startDate && d <= endDate) newDates.push(dateToKey(d));
-        }
-        cur.setMonth(cur.getMonth() + 1);
-      }
-    }
-
-    // 既存のイベントと重複しないもののみ追加
-    const existingDates = new Set();
-    for (let i = 0; i < keys.length; i++) {
-      if (events[keys[i]] && events[keys[i]].some(e => e.groupId === ev.groupId)) {
-        existingDates.add(keys[i]);
-      }
-    }
-
-    for (let i = 0; i < newDates.length; i++) {
-      if (!existingDates.has(newDates[i])) {
-        addEvent(newDates[i], {
-          id: generateId(),
-          groupId: ev.groupId,
-          time: ev.time,
-          title: ev.title,
-          detail: ev.detail,
-          colorIndex: ev.colorIndex,
-          recurrenceInfo: info
-        });
-      }
-    }
+  function extendRecurringEvents(ev,newEndDate) {
+    const info=ev.recurrenceInfo; if(!info)return;
+    let lastDate=''; const keys=Object.keys(events);
+    for(let i=0;i<keys.length;i++){if(events[keys[i]].some(e=>e.groupId===ev.groupId)){if(keys[i]>lastDate)lastDate=keys[i];}}
+    if(!lastDate||newEndDate<=lastDate)return;
+    const startDate=new Date(lastDate+'T00:00:00'); startDate.setDate(startDate.getDate()+1);
+    const endDate=new Date(newEndDate+'T23:59:59'); let newDates=[];
+    if(info.type==='weekly'){let cur=new Date(startDate);cur.setDate(cur.getDate()-cur.getDay());while(cur<=endDate){for(const dow of(info.days||[])){const t=new Date(cur);t.setDate(t.getDate()+dow);if(t>=startDate&&t<=endDate)newDates.push(dateToKey(t));}cur.setDate(cur.getDate()+7*(info.interval||1));}}
+    else if(info.type==='monthly'){const dom=info.dayOfMonth;let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);while(cur<=endDate){const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();const ad=Math.min(dom,dim);const t=new Date(cur.getFullYear(),cur.getMonth(),ad);if(t>=startDate&&t<=endDate)newDates.push(dateToKey(t));cur.setMonth(cur.getMonth()+1);}}
+    else if(info.type==='nth-weekday'){let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);while(cur<=endDate){for(const nth of(info.nths||[])){const d=getNthWeekday(cur.getFullYear(),cur.getMonth(),info.dow,nth);if(d&&d>=startDate&&d<=endDate)newDates.push(dateToKey(d));}cur.setMonth(cur.getMonth()+1);}}
+    const existingDates=new Set();
+    for(let i=0;i<keys.length;i++){if(events[keys[i]]&&events[keys[i]].some(e=>e.groupId===ev.groupId))existingDates.add(keys[i]);}
+    for(let i=0;i<newDates.length;i++){if(!existingDates.has(newDates[i])){addEvent(newDates[i],{id:generateId(),groupId:ev.groupId,time:ev.time,title:ev.title,detail:ev.detail,colorIndex:ev.colorIndex,recurrenceInfo:info});}}
   }
 
   // ===== 繰り返し日付生成 =====
-  function generateRecurringDates(type, startDateKey) {
-    const dates = [];
-    const startDate = new Date(startDateKey + 'T00:00:00');
-    let info = {};
-
-    if (type === 'weekly') {
-      const interval = parseInt(document.getElementById('week-interval').value) || 1;
-      const selectedDays = [];
-      document.querySelectorAll('.weekday-btn.active').forEach(b => selectedDays.push(parseInt(b.dataset.day)));
-      if (selectedDays.length === 0) selectedDays.push(startDate.getDay());
-
-      const endInput = document.getElementById('recurrence-end-date').value;
-      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
-      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
-
-      info = { type: 'weekly', interval, days: selectedDays };
-
-      let cur = new Date(startDate);
-      cur.setDate(cur.getDate() - cur.getDay());
-      while (cur <= endDate) {
-        for (const dow of selectedDays) {
-          const t = new Date(cur);
-          t.setDate(t.getDate() + dow);
-          if (t >= startDate && t <= endDate) dates.push(dateToKey(t));
-        }
-        cur.setDate(cur.getDate() + 7 * interval);
-      }
-    } else if (type === 'monthly') {
-      const dayOfMonth = parseInt(document.getElementById('monthly-day').value);
-      const endInput = document.getElementById('monthly-end-date').value;
-      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
-      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
-
-      info = { type: 'monthly', dayOfMonth };
-
-      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      while (cur <= endDate) {
-        const dim = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
-        const actualDay = Math.min(dayOfMonth, dim);
-        const target = new Date(cur.getFullYear(), cur.getMonth(), actualDay);
-        if (target >= startDate && target <= endDate) dates.push(dateToKey(target));
-        cur.setMonth(cur.getMonth() + 1);
-      }
-    } else if (type === 'nth-weekday') {
-      const dow = parseInt(document.getElementById('nth-weekday-day').value);
-      const nths = [];
-      document.querySelectorAll('.nth-btn.active').forEach(b => nths.push(parseInt(b.dataset.nth)));
-      if (nths.length === 0) return { dates: [startDateKey], info: {} };
-
-      const endInput = document.getElementById('nth-end-date').value;
-      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
-      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
-
-      info = { type: 'nth-weekday', dow, nths };
-
-      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      while (cur <= endDate) {
-        for (const nth of nths) {
-          const d = getNthWeekday(cur.getFullYear(), cur.getMonth(), dow, nth);
-          if (d && d >= startDate && d <= endDate) dates.push(dateToKey(d));
-        }
-        cur.setMonth(cur.getMonth() + 1);
-      }
-    } else if (type === 'custom') {
-      if (customDates.length > 0) dates.push(...customDates);
-      if (dates.length === 0) dates.push(startDateKey);
-      info = { type: 'custom' };
+  function generateRecurringDates(type,startDateKey) {
+    const dates=[]; const startDate=new Date(startDateKey+'T00:00:00'); let info={};
+    if(type==='weekly'){
+      const interval=parseInt(document.getElementById('week-interval').value)||1;
+      const selectedDays=[];document.querySelectorAll('.weekday-btn.active').forEach(b=>selectedDays.push(parseInt(b.dataset.day)));
+      if(selectedDays.length===0)selectedDays.push(startDate.getDay());
+      const endInput=document.getElementById('recurrence-end-date').value;
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      info={type:'weekly',interval,days:selectedDays};
+      let cur=new Date(startDate);cur.setDate(cur.getDate()-cur.getDay());
+      while(cur<=endDate){for(const dow of selectedDays){const t=new Date(cur);t.setDate(t.getDate()+dow);if(t>=startDate&&t<=endDate)dates.push(dateToKey(t));}cur.setDate(cur.getDate()+7*interval);}
+    } else if(type==='monthly'){
+      const dom=parseInt(document.getElementById('monthly-day').value);
+      const endInput=document.getElementById('monthly-end-date').value;
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      info={type:'monthly',dayOfMonth:dom};
+      let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
+      while(cur<=endDate){const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();const ad=Math.min(dom,dim);const t=new Date(cur.getFullYear(),cur.getMonth(),ad);if(t>=startDate&&t<=endDate)dates.push(dateToKey(t));cur.setMonth(cur.getMonth()+1);}
+    } else if(type==='nth-weekday'){
+      const dow=parseInt(document.getElementById('nth-weekday-day').value);const nths=[];
+      document.querySelectorAll('.nth-btn.active').forEach(b=>nths.push(parseInt(b.dataset.nth)));
+      if(nths.length===0)return{dates:[startDateKey],info:{}};
+      const endInput=document.getElementById('nth-end-date').value;
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      info={type:'nth-weekday',dow,nths};
+      let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
+      while(cur<=endDate){for(const nth of nths){const d=getNthWeekday(cur.getFullYear(),cur.getMonth(),dow,nth);if(d&&d>=startDate&&d<=endDate)dates.push(dateToKey(d));}cur.setMonth(cur.getMonth()+1);}
+    } else if(type==='custom'){
+      if(customDates.length>0)dates.push(...customDates);if(dates.length===0)dates.push(startDateKey);info={type:'custom'};
     }
-
-    return { dates: [...new Set(dates)].sort(), info };
+    return{dates:[...new Set(dates)].sort(),info};
   }
-
-  function getNthWeekday(year, month, dow, nth) {
-    const first = new Date(year, month, 1);
-    let firstOcc = 1 + ((dow - first.getDay() + 7) % 7);
-    const target = firstOcc + (nth - 1) * 7;
-    if (target > new Date(year, month + 1, 0).getDate()) return null;
-    return new Date(year, month, target);
-  }
+  function getNthWeekday(year,month,dow,nth){const first=new Date(year,month,1);let fo=1+((dow-first.getDay()+7)%7);const t=fo+(nth-1)*7;if(t>new Date(year,month+1,0).getDate())return null;return new Date(year,month,t);}
 
   // ===== 削除確認 =====
   function showDeleteConfirm(eventId) {
-    const dialog = document.getElementById('confirm-dialog');
-    document.getElementById('confirm-title').textContent = '予定を削除';
-    document.getElementById('confirm-message').textContent = 'この予定を削除してもよろしいですか？';
-    document.getElementById('confirm-actions').innerHTML =
-      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>' +
-      '<button class="primary-btn" style="background:#DC2626" id="confirm-ok">削除</button>';
+    const dialog=document.getElementById('confirm-dialog');
+    document.getElementById('confirm-title').textContent='予定を削除';
+    document.getElementById('confirm-message').textContent='この予定を削除してもよろしいですか？';
+    document.getElementById('confirm-actions').innerHTML='<button class="secondary-btn" id="confirm-cancel">キャンセル</button><button class="primary-btn" style="background:#DC2626" id="confirm-ok">削除</button>';
     dialog.classList.remove('hidden');
-
-    document.getElementById('confirm-ok').onclick = () => {
-      deleteEvent(selectedDate, eventId); saveEvents(); dialog.classList.add('hidden');
-      renderDetailPanel(selectedDate); renderAllMonths();
-    };
-    document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
+    document.getElementById('confirm-ok').onclick=()=>{deleteEvent(selectedDate,eventId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
+    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
   }
-
-  function showDeleteGroupConfirm(eventId, groupId) {
-    const dialog = document.getElementById('confirm-dialog');
-    document.getElementById('confirm-title').textContent = '繰り返し予定の削除';
-    document.getElementById('confirm-message').textContent = '削除する範囲を選択してください。';
-    document.getElementById('confirm-actions').innerHTML =
-      '<button class="secondary-btn" id="confirm-cancel">キャンセル</button>' +
-      '<button class="secondary-btn" id="confirm-single" style="color:#DC2626">この日のみ</button>' +
-      '<button class="primary-btn" id="confirm-all" style="background:#DC2626">すべて削除</button>';
+  function showDeleteGroupConfirm(eventId,groupId) {
+    const dialog=document.getElementById('confirm-dialog');
+    document.getElementById('confirm-title').textContent='繰り返し予定の削除';
+    document.getElementById('confirm-message').textContent='削除する範囲を選択してください。';
+    document.getElementById('confirm-actions').innerHTML='<button class="secondary-btn" id="confirm-cancel">キャンセル</button><button class="secondary-btn" id="confirm-single" style="color:#DC2626">この日のみ</button><button class="primary-btn" id="confirm-all" style="background:#DC2626">すべて削除</button>';
     dialog.classList.remove('hidden');
-
-    document.getElementById('confirm-single').onclick = () => {
-      deleteEvent(selectedDate, eventId); saveEvents(); dialog.classList.add('hidden');
-      renderDetailPanel(selectedDate); renderAllMonths();
-    };
-    document.getElementById('confirm-all').onclick = () => {
-      deleteEventsByGroupId(groupId); saveEvents(); dialog.classList.add('hidden');
-      renderDetailPanel(selectedDate); renderAllMonths();
-    };
-    document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
+    document.getElementById('confirm-single').onclick=()=>{deleteEvent(selectedDate,eventId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
+    document.getElementById('confirm-all').onclick=()=>{deleteEventsByGroupId(groupId);saveEvents();dialog.classList.add('hidden');renderDetailPanel(selectedDate);renderAllMonths();};
+    document.getElementById('confirm-cancel').onclick=()=>dialog.classList.add('hidden');
   }
 
   // ===== 同期設定 =====
-  document.getElementById('btn-sync').addEventListener('click', () => {
-    const config = loadSyncConfig();
-    if (config) {
-      document.getElementById('fb-apiKey').value = config.apiKey || '';
-      document.getElementById('fb-authDomain').value = config.authDomain || '';
-      document.getElementById('fb-projectId').value = config.projectId || '';
-      document.getElementById('fb-userId').value = config.userId || '';
-    }
+  document.getElementById('btn-sync').addEventListener('click',()=>{
+    const c=loadSyncConfig();if(c){document.getElementById('fb-apiKey').value=c.apiKey||'';document.getElementById('fb-authDomain').value=c.authDomain||'';document.getElementById('fb-projectId').value=c.projectId||'';document.getElementById('fb-userId').value=c.userId||'';}
     document.getElementById('sync-modal').classList.remove('hidden');
   });
-
-  document.getElementById('btn-close-sync').addEventListener('click', () => document.getElementById('sync-modal').classList.add('hidden'));
-
-  document.getElementById('btn-save-sync').addEventListener('click', () => {
-    const config = {
-      apiKey: document.getElementById('fb-apiKey').value.trim(),
-      authDomain: document.getElementById('fb-authDomain').value.trim(),
-      projectId: document.getElementById('fb-projectId').value.trim(),
-      userId: document.getElementById('fb-userId').value.trim(),
-    };
-    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(config));
-    initFirebase();
+  document.getElementById('btn-close-sync').addEventListener('click',()=>document.getElementById('sync-modal').classList.add('hidden'));
+  document.getElementById('btn-save-sync').addEventListener('click',()=>{
+    const config={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),userId:document.getElementById('fb-userId').value.trim()};
+    localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(config));initFirebase();
+  });
+  document.getElementById('btn-disconnect-sync').addEventListener('click',()=>{if(firebaseUnsubscribe){firebaseUnsubscribe();firebaseUnsubscribe=null;}firebaseDb=null;initialLoadDone=false;localStorage.removeItem(SYNC_CONFIG_KEY);updateSyncStatus('','切断しました');});
+  document.getElementById('btn-export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(events,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`calendar-backup-${dateToKey(new Date())}.json`;a.click();URL.revokeObjectURL(url);});
+  document.getElementById('btn-import').addEventListener('click',()=>document.getElementById('import-file').click());
+  document.getElementById('import-file').addEventListener('change',(e)=>{
+    const file=e.target.files[0];if(!file)return;const reader=new FileReader();
+    reader.onload=(ev)=>{try{const imported=JSON.parse(ev.target.result);for(const[dk,evList]of Object.entries(imported)){if(!events[dk])events[dk]=[];const ids=new Set(events[dk].map(e=>e.id));for(const ev of evList){if(!ids.has(ev.id))events[dk].push(ev);}}saveEvents();renderAllMonths();if(selectedDate)renderDetailPanel(selectedDate);alert('インポートが完了しました。');}catch{alert('ファイルの読み込みに失敗しました。');}};
+    reader.readAsText(file);e.target.value='';
   });
 
-  document.getElementById('btn-disconnect-sync').addEventListener('click', () => {
-    if (firebaseUnsubscribe) { firebaseUnsubscribe(); firebaseUnsubscribe = null; }
-    firebaseDb = null;
-    initialLoadDone = false;
-    localStorage.removeItem(SYNC_CONFIG_KEY);
-    updateSyncStatus('', '切断しました');
-  });
-
-  document.getElementById('btn-export').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `calendar-backup-${dateToKey(new Date())}.json`;
-    a.click(); URL.revokeObjectURL(url);
-  });
-
-  document.getElementById('btn-import').addEventListener('click', () => document.getElementById('import-file').click());
-
-  document.getElementById('import-file').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const imported = JSON.parse(ev.target.result);
-        for (const [dk, evList] of Object.entries(imported)) {
-          if (!events[dk]) events[dk] = [];
-          const localIds = new Set(events[dk].map(e => e.id));
-          for (const ev of evList) {
-            if (!localIds.has(ev.id)) events[dk].push(ev);
-          }
-        }
-        saveEvents(); renderAllMonths();
-        if (selectedDate) renderDetailPanel(selectedDate);
-        alert('インポートが完了しました。');
-      } catch { alert('ファイルの読み込みに失敗しました。'); }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-
-  // ===== 背景クリック =====
-  document.getElementById('confirm-dialog').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
-  });
-  document.getElementById('event-modal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-  document.getElementById('sync-modal').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
-  });
+  // 背景クリック
+  document.getElementById('confirm-dialog').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
+  document.getElementById('event-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
+  document.getElementById('sync-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 
   // ===== 初期化 =====
   loadEvents();
   cleanupOldEvents();
-  baseMonth = new Date();
+  baseMonth=new Date();
   renderAllMonths();
   initFirebase();
 })();
