@@ -11,12 +11,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --pink: #FF8FAB;
-  --blue: #89CFF0;
-  --mint: #A7F3D0;
-  --pink-bg: #FFF0F3;
-  --blue-bg: #EBF5FF;
-  --mint-bg: #ECFDF5;
+  --color0: #7CB9E8;
+  --color1: #E74C3C;
+  --color2: #E67E22;
+  --color0-bg: #EAF4FC;
+  --color1-bg: #FDE8E8;
+  --color2-bg: #FFF3E0;
   --sunday: #E53E3E;
   --saturday: #3B82F6;
   --holiday: #E53E3E;
@@ -28,6 +28,7 @@
   --text-light: #6B7280;
   --border: #E5E7EB;
   --radius: 8px;
+  --accent: #5B9BD5;
 }
 
 body {
@@ -71,20 +72,18 @@ body {
   display: flex;
   max-width: 1600px;
   margin: 0 auto;
-  transition: all 0.25s ease;
 }
 
 #calendar-container {
   flex: 1;
   min-width: 0;
   padding: 8px;
-  transition: all 0.25s ease;
 }
 
 /* ===== 詳細パネル（サイドバー方式） ===== */
 #detail-panel {
-  width: 380px;
-  min-width: 380px;
+  width: 400px;
+  min-width: 400px;
   background: white;
   border-left: 1px solid var(--border);
   box-shadow: -2px 0 10px rgba(0,0,0,0.05);
@@ -93,7 +92,6 @@ body {
   position: sticky;
   top: 52px;
   height: calc(100vh - 52px);
-  transition: all 0.25s ease;
 }
 
 #detail-panel.hidden {
@@ -106,8 +104,8 @@ body {
 
 .panel-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px; border-bottom: 1px solid var(--border);
-  min-width: 380px;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  min-width: 400px; background: #FAFBFC;
 }
 
 .panel-header h2 { font-size: 1.1rem; white-space: nowrap; }
@@ -115,14 +113,15 @@ body {
 .panel-body {
   flex: 1;
   overflow-y: auto;
-  min-width: 380px;
+  min-width: 400px;
 }
 
-#detail-events-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+#detail-events-list { flex: 1; overflow-y: auto; padding: 16px 20px; }
 
 .panel-footer {
-  padding: 12px 16px 16px;
-  min-width: 380px;
+  padding: 12px 20px 16px;
+  min-width: 400px;
+  border-top: 1px solid var(--border);
 }
 
 /* ===== 月ヘッダー ===== */
@@ -200,7 +199,7 @@ body {
 }
 
 .day-cell.selected-day {
-  box-shadow: 0 0 0 2px var(--blue);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .day-number {
@@ -231,38 +230,63 @@ body {
   overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
 }
 
-.day-event-item.color-0 { background: var(--pink-bg); border-left: 3px solid var(--pink); }
-.day-event-item.color-1 { background: var(--blue-bg); border-left: 3px solid var(--blue); }
-.day-event-item.color-2 { background: var(--mint-bg); border-left: 3px solid var(--mint); }
+.day-event-item.color-0 { background: var(--color0-bg); border-left: 3px solid var(--color0); }
+.day-event-item.color-1 { background: var(--color1-bg); border-left: 3px solid var(--color1); }
+.day-event-item.color-2 { background: var(--color2-bg); border-left: 3px solid var(--color2); }
 
-/* ===== 詳細カード ===== */
+/* ===== 詳細カード（見やすく改善） ===== */
 .detail-event-card {
-  background: var(--bg); border-radius: var(--radius);
-  padding: 12px; margin-bottom: 10px; cursor: pointer;
+  background: #FFFFFF; border-radius: 10px;
+  padding: 16px 18px; margin-bottom: 14px;
   transition: box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
 }
 
-.detail-event-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.detail-event-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); }
 
-.detail-event-card.color-0 { border-left: 4px solid var(--pink); }
-.detail-event-card.color-1 { border-left: 4px solid var(--blue); }
-.detail-event-card.color-2 { border-left: 4px solid var(--mint); }
+.detail-event-card.color-0 { border-left: 5px solid var(--color0); }
+.detail-event-card.color-1 { border-left: 5px solid var(--color1); }
+.detail-event-card.color-2 { border-left: 5px solid var(--color2); }
 
-.detail-event-time { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
-.detail-event-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
-.detail-event-detail { font-size: 0.8rem; color: var(--text-light); white-space: pre-wrap; }
+.detail-event-time {
+  font-size: 0.8rem; font-weight: 600; color: var(--text-light);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
+}
+.detail-event-time::before { content: '🕐'; font-size: 0.75rem; }
 
-.detail-event-actions { display: flex; gap: 8px; margin-top: 8px; }
+.detail-event-title {
+  font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;
+  color: var(--text); line-height: 1.4;
+}
+
+.detail-event-detail {
+  font-size: 0.88rem; color: var(--text-light); white-space: pre-wrap;
+  line-height: 1.6; padding: 10px 12px;
+  background: var(--bg); border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.detail-event-actions {
+  display: flex; gap: 8px; margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
 
 .detail-event-actions button {
-  padding: 4px 12px; border-radius: 4px;
+  padding: 6px 16px; border-radius: 6px;
   border: 1px solid var(--border); background: white;
-  cursor: pointer; font-size: 0.75rem;
+  cursor: pointer; font-size: 0.8rem; font-weight: 500;
+  transition: all 0.15s;
 }
 
-.detail-event-actions .edit-btn:hover { background: var(--blue-bg); }
+.detail-event-actions .edit-btn:hover { background: var(--color0-bg); border-color: var(--color0); }
 .detail-event-actions .delete-btn { color: #DC2626; border-color: #FCA5A5; }
 .detail-event-actions .delete-btn:hover { background: #FEF2F2; }
+
+.detail-no-events {
+  text-align: center; color: #9CA3AF; padding: 40px 20px;
+  font-size: 0.95rem; line-height: 1.6;
+}
 
 /* ===== モーダル ===== */
 .modal {
@@ -314,12 +338,12 @@ body {
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
-  outline: none; border-color: var(--blue);
-  box-shadow: 0 0 0 2px rgba(137,207,240,0.3);
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
 }
 
 /* ===== 色選択 ===== */
-.color-picker { display: flex; gap: 12px; }
+.color-picker { display: flex; gap: 12px; align-items: center; }
 
 .color-option {
   width: 36px; height: 36px; border-radius: 50%;
@@ -329,6 +353,8 @@ body {
 
 .color-option:hover { transform: scale(1.1); }
 .color-option.selected { border-color: var(--text); transform: scale(1.15); }
+
+.color-label { font-size: 0.75rem; color: var(--text-light); margin-left: -4px; }
 
 /* ===== 曜日セレクター ===== */
 .weekday-selector, .nth-selector { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -340,7 +366,7 @@ body {
 }
 
 .weekday-btn.active, .nth-btn.active {
-  background: var(--blue); color: white; border-color: var(--blue);
+  background: var(--accent); color: white; border-color: var(--accent);
 }
 
 /* ===== 繰り返し間隔 ===== */
@@ -349,7 +375,18 @@ body {
 }
 .interval-row span { font-size: 0.85rem; white-space: nowrap; }
 .interval-row select {
-  width: 70px; padding: 6px 8px;
+  width: auto; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; background: white;
+}
+
+/* ===== 毎月何日 ===== */
+.monthly-day-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.monthly-day-row span { font-size: 0.85rem; white-space: nowrap; }
+.monthly-day-row select {
+  width: auto; padding: 6px 8px;
   border: 1px solid var(--border); border-radius: var(--radius);
   font-size: 0.9rem; background: white;
 }
@@ -391,7 +428,7 @@ body {
 .mini-cal-day.empty { cursor: default; }
 .mini-cal-day.empty:hover { background: transparent; }
 .mini-cal-day.checked {
-  background: var(--blue); color: white; font-weight: 700;
+  background: var(--accent); color: white; font-weight: 700;
 }
 .mini-cal-day.sun { color: var(--sunday); }
 .mini-cal-day.sat { color: var(--saturday); }
@@ -411,7 +448,7 @@ body {
 
 .date-chip {
   display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 8px; background: var(--blue-bg);
+  padding: 2px 8px; background: var(--color0-bg);
   border-radius: 12px; font-size: 0.75rem; color: var(--text);
 }
 .date-chip button {
@@ -423,7 +460,7 @@ body {
 /* ===== ボタン ===== */
 .primary-btn {
   width: 100%; padding: 10px 20px;
-  background: var(--blue); color: white; border: none;
+  background: var(--accent); color: white; border: none;
   border-radius: var(--radius); font-size: 0.9rem;
   font-weight: 600; cursor: pointer; transition: opacity 0.15s;
 }
@@ -435,11 +472,6 @@ body {
   font-size: 0.9rem; cursor: pointer;
 }
 .secondary-btn:hover { background: var(--bg); }
-
-.small-btn {
-  padding: 6px 12px; background: var(--blue); color: white;
-  border: none; border-radius: var(--radius); font-size: 0.8rem; cursor: pointer;
-}
 
 .close-btn {
   width: 32px; height: 32px; border: none; background: none;
@@ -472,7 +504,7 @@ body {
   font-size: 0.8rem; text-align: center;
 }
 
-.sync-status.connected { background: var(--mint-bg); color: #065F46; }
+.sync-status.connected { background: #E8F5E9; color: #065F46; }
 .sync-status.error { background: #FEF2F2; color: #DC2626; }
 
 hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
@@ -538,12 +570,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </header>
 
-<!-- メインレイアウト: カレンダー + 詳細パネル 横並び -->
+<!-- メインレイアウト -->
 <div id="main-layout">
-  <!-- カレンダーコンテナ -->
   <div id="calendar-container"></div>
 
-  <!-- 日付詳細パネル（サイドバー） -->
   <div id="detail-panel" class="hidden">
     <div class="panel-header">
       <h2 id="detail-date-title"></h2>
@@ -558,7 +588,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
-<!-- パネルオーバーレイ（モバイル用） -->
 <div id="panel-overlay"></div>
 
 <!-- 予定追加/編集モーダル -->
@@ -570,12 +599,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     </div>
     <form id="event-form">
       <div class="form-group">
-        <label>時間</label>
-        <input type="time" id="event-time" required>
+        <label>時間（空欄可）</label>
+        <input type="time" id="event-time">
       </div>
       <div class="form-group">
-        <label>表題</label>
-        <input type="text" id="event-title" required maxlength="50" placeholder="予定の表題">
+        <label>表題（空欄可）</label>
+        <input type="text" id="event-title" maxlength="50" placeholder="予定の表題">
       </div>
       <div class="form-group">
         <label>詳細</label>
@@ -584,18 +613,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <div class="form-group">
         <label>色</label>
         <div id="color-picker" class="color-picker">
-          <button type="button" class="color-option selected" data-color="0" style="background:#FF8FAB" title="ピンク"></button>
-          <button type="button" class="color-option" data-color="1" style="background:#89CFF0" title="スカイブルー"></button>
-          <button type="button" class="color-option" data-color="2" style="background:#A7F3D0" title="ミントグリーン"></button>
+          <button type="button" class="color-option selected" data-color="0" style="background:#7CB9E8" title="薄い青"></button>
+          <span class="color-label">青</span>
+          <button type="button" class="color-option" data-color="1" style="background:#E74C3C" title="赤"></button>
+          <span class="color-label">赤</span>
+          <button type="button" class="color-option" data-color="2" style="background:#E67E22" title="濃いオレンジ"></button>
+          <span class="color-label">橙</span>
         </div>
       </div>
 
       <!-- 繰り返し設定 -->
-      <div class="form-group">
+      <div class="form-group" id="recurrence-group">
         <label>繰り返し</label>
         <select id="recurrence-type">
           <option value="none">なし</option>
           <option value="weekly">N週間ごと</option>
+          <option value="monthly">毎月何日</option>
           <option value="nth-weekday">第N曜日</option>
           <option value="custom">カスタム（カレンダーから複数日選択）</option>
         </select>
@@ -630,6 +663,19 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </div>
       </div>
 
+      <!-- 毎月何日設定 -->
+      <div id="monthly-options" class="recurrence-options hidden">
+        <div class="monthly-day-row">
+          <span>毎月</span>
+          <select id="monthly-day"></select>
+          <span>日</span>
+        </div>
+        <div class="form-group">
+          <label>終了日</label>
+          <input type="date" id="monthly-end-date">
+        </div>
+      </div>
+
       <!-- 第N曜日設定 -->
       <div id="nth-weekday-options" class="recurrence-options hidden">
         <div class="form-group">
@@ -660,7 +706,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         </div>
       </div>
 
-      <!-- カスタム日付選択（ミニカレンダー） -->
+      <!-- カスタム日付選択 -->
       <div id="custom-options" class="recurrence-options hidden">
         <label style="margin-bottom:8px;display:block">カレンダーから日付をタップして選択</label>
         <div class="mini-cal-nav">
@@ -676,6 +722,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <strong>選択中: <span id="selected-count">0</span>日</strong>
           <div id="selected-dates-chips" class="selected-dates-chips"></div>
         </div>
+      </div>
+
+      <!-- 編集時の終了日延長 -->
+      <div id="extend-end-group" class="form-group" style="display:none">
+        <label>繰り返し終了日を変更</label>
+        <input type="date" id="extend-end-date">
+        <p style="font-size:0.75rem;color:var(--text-light);margin-top:4px;">
+          終了日を延長すると、新しい予定が追加されます。
+        </p>
       </div>
 
       <div class="form-actions">
@@ -745,6 +800,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   const STORAGE_KEY = 'calendar_events';
   const SYNC_CONFIG_KEY = 'calendar_sync_config';
   const LAST_MODIFIED_KEY = 'calendar_last_modified';
+  const CLEANUP_KEY = 'calendar_last_cleanup';
 
   let events = {};
   let selectedDate = null;
@@ -754,28 +810,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let miniCalMonth = new Date();
   let firebaseDb = null;
   let firebaseUnsubscribe = null;
-  let isSyncingFromFirebase = false; // Firebase受信中フラグ（ループ防止）
-  let initialLoadDone = false; // 初回読み込み完了フラグ
+  let isSyncingFromFirebase = false;
+  let initialLoadDone = false;
+
+  // ===== 毎月日セレクタ初期化 =====
+  const monthlyDaySelect = document.getElementById('monthly-day');
+  for (let d = 1; d <= 31; d++) {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    monthlyDaySelect.appendChild(opt);
+  }
+
+  // ===== 10年後のデフォルト終了日 =====
+  function getDefaultEndDate() {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 10);
+    return dateToKey(d);
+  }
 
   // ===== 日本の祝日計算 =====
-  function getJapaneseHolidays(year) {
+  const holidayCache = {};
+
+  function getHolidays(year) {
+    if (holidayCache[year]) return holidayCache[year];
     const holidays = {};
 
     function add(m, d, name) {
-      const key = `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      holidays[key] = name;
+      holidays[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name;
     }
-
-    add(1,1,'元日');
-    add(2,11,'建国記念の日');
-    add(2,23,'天皇誕生日');
-    add(4,29,'昭和の日');
-    add(5,3,'憲法記念日');
-    add(5,4,'みどりの日');
-    add(5,5,'こどもの日');
-    add(8,11,'山の日');
-    add(11,3,'文化の日');
-    add(11,23,'勤労感謝の日');
 
     function nthMonday(month, n) {
       const first = new Date(year, month-1, 1);
@@ -784,16 +846,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       return firstMon + (n-1) * 7;
     }
 
+    add(1,1,'元日');
     add(1, nthMonday(1,2), '成人の日');
-    add(7, nthMonday(7,3), '海の日');
-    add(9, nthMonday(9,3), '敬老の日');
-    add(10, nthMonday(10,2), 'スポーツの日');
-
+    add(2,11,'建国記念の日');
+    add(2,23,'天皇誕生日');
     const spring = Math.floor(20.8431 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
     add(3, spring, '春分の日');
-
+    add(4,29,'昭和の日');
+    add(5,3,'憲法記念日');
+    add(5,4,'みどりの日');
+    add(5,5,'こどもの日');
+    add(7, nthMonday(7,3), '海の日');
+    add(8,11,'山の日');
+    add(9, nthMonday(9,3), '敬老の日');
     const autumn = Math.floor(23.2488 + 0.242194*(year-1980)) - Math.floor((year-1980)/4);
     add(9, autumn, '秋分の日');
+    add(10, nthMonday(10,2), 'スポーツの日');
+    add(11,3,'文化の日');
+    add(11,23,'勤労感謝の日');
 
     // 振替休日
     const sorted = Object.keys(holidays).sort();
@@ -822,6 +892,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
     }
 
+    holidayCache[year] = holidays;
     return holidays;
   }
 
@@ -830,7 +901,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   }
 
-  function isToday(dateKey) { return dateKey === dateToKey(new Date()); }
+  const todayKey = dateToKey(new Date());
+  function isToday(dateKey) { return dateKey === todayKey; }
 
   function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2,9);
@@ -854,6 +926,37 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   function getNow() { return new Date().toISOString(); }
 
+  // ===== 3ヶ月以上前の予定を自動削除 =====
+  function cleanupOldEvents() {
+    const lastCleanup = localStorage.getItem(CLEANUP_KEY);
+    const now = new Date();
+
+    // 最後のクリーンアップから7日以内ならスキップ
+    if (lastCleanup) {
+      const lastDate = new Date(lastCleanup);
+      if ((now - lastDate) / 86400000 < 7) return;
+    }
+
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 3);
+    const cutoffKey = dateToKey(cutoff);
+
+    let changed = false;
+    const keys = Object.keys(events);
+    for (let i = 0; i < keys.length; i++) {
+      if (keys[i] < cutoffKey) {
+        delete events[keys[i]];
+        changed = true;
+      }
+    }
+
+    localStorage.setItem(CLEANUP_KEY, now.toISOString());
+
+    if (changed) {
+      saveEvents();
+    }
+  }
+
   // ===== ストレージ =====
   function loadEvents() {
     try {
@@ -866,43 +969,41 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const now = getNow();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
     localStorage.setItem(LAST_MODIFIED_KEY, now);
-    if (!isSyncingFromFirebase) {
-      syncToFirebase(now);
-    }
+    if (!isSyncingFromFirebase) syncToFirebase(now);
   }
 
   function addEvent(dateKey, event) {
     if (!events[dateKey]) events[dateKey] = [];
     events[dateKey].push(event);
-    saveEvents();
   }
 
   function updateEvent(dateKey, eventId, updates) {
     if (!events[dateKey]) return;
     const idx = events[dateKey].findIndex(e => e.id === eventId);
-    if (idx !== -1) { Object.assign(events[dateKey][idx], updates); saveEvents(); }
+    if (idx !== -1) Object.assign(events[dateKey][idx], updates);
   }
 
   function deleteEvent(dateKey, eventId) {
     if (!events[dateKey]) return;
     events[dateKey] = events[dateKey].filter(e => e.id !== eventId);
     if (events[dateKey].length === 0) delete events[dateKey];
-    saveEvents();
   }
 
   function deleteEventsByGroupId(groupId) {
-    for (const dk of Object.keys(events)) {
-      events[dk] = events[dk].filter(e => e.groupId !== groupId);
-      if (events[dk].length === 0) delete events[dk];
+    const keys = Object.keys(events);
+    for (let i = 0; i < keys.length; i++) {
+      events[keys[i]] = events[keys[i]].filter(e => e.groupId !== groupId);
+      if (events[keys[i]].length === 0) delete events[keys[i]];
     }
-    saveEvents();
   }
 
   function getEventsForDate(dateKey) {
-    return (events[dateKey] || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+    const evs = events[dateKey];
+    if (!evs || evs.length === 0) return [];
+    return evs.slice().sort((a,b) => (a.time || '').localeCompare(b.time || ''));
   }
 
-  // ===== Firebase同期（修正版） =====
+  // ===== Firebase同期 =====
   function loadSyncConfig() {
     try { return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY)); }
     catch { return null; }
@@ -931,7 +1032,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             const localUpdatedAt = localStorage.getItem(LAST_MODIFIED_KEY) || '';
 
             if (!initialLoadDone) {
-              // 初回読み込み: Firebaseのデータをローカルにマージ
               initialLoadDone = true;
               const remoteEvents = remoteData.events || {};
               mergeEvents(remoteEvents);
@@ -941,10 +1041,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               }
               renderAllMonths();
               if (selectedDate) renderDetailPanel(selectedDate);
-              // マージ結果をFirebaseに書き戻す
               syncToFirebase(getNow());
             } else {
-              // 2回目以降: 他デバイスからの変更を受信
               isSyncingFromFirebase = true;
               events = remoteData.events || {};
               localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
@@ -954,7 +1052,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               isSyncingFromFirebase = false;
             }
           } else {
-            // Firebaseにデータがない場合、ローカルデータをアップロード
             initialLoadDone = true;
             syncToFirebase(getNow());
           }
@@ -966,7 +1063,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
   }
 
-  // イベントをマージ（ローカルとリモートの両方を保持）
   function mergeEvents(remoteEvents) {
     for (const dateKey of Object.keys(remoteEvents)) {
       if (!events[dateKey]) {
@@ -974,13 +1070,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       } else {
         const localIds = new Set(events[dateKey].map(e => e.id));
         for (const remoteEv of remoteEvents[dateKey]) {
-          if (!localIds.has(remoteEv.id)) {
-            events[dateKey].push(remoteEv);
-          }
+          if (!localIds.has(remoteEv.id)) events[dateKey].push(remoteEv);
         }
       }
     }
-    // ローカルにあるキーはそのまま保持される
   }
 
   function syncToFirebase(timestamp) {
@@ -1005,21 +1098,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     el.textContent = message;
   }
 
-  // ===== カレンダー描画 =====
-  const holidayCache = {};
-
-  function getHolidays(year) {
-    if (!holidayCache[year]) holidayCache[year] = getJapaneseHolidays(year);
-    return holidayCache[year];
-  }
-
+  // ===== カレンダー描画（パフォーマンス最適化） =====
   function renderAllMonths() {
     const container = document.getElementById('calendar-container');
-    container.innerHTML = '';
+    const frag = document.createDocumentFragment();
     for (let offset = 0; offset < 2; offset++) {
       const month = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + offset, 1);
-      container.appendChild(renderMonth(month, offset === 0));
+      frag.appendChild(renderMonth(month, offset === 0));
     }
+    container.innerHTML = '';
+    container.appendChild(frag);
   }
 
   function renderMonth(monthDate, showNav) {
@@ -1031,41 +1119,49 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const block = document.createElement('div');
     block.className = 'month-block';
 
+    // ヘッダー
     const header = document.createElement('div');
     header.className = 'month-header';
     header.innerHTML = `<h2>${year}年 ${month+1}月</h2>${showNav ? '<div class="month-nav"><button id="btn-prev-month">◀</button><button id="btn-next-month">▶</button></div>' : ''}`;
     block.appendChild(header);
 
+    // 曜日
     const wh = document.createElement('div');
     wh.className = 'weekday-header';
-    WEEKDAYS.forEach(d => { const s = document.createElement('span'); s.textContent = d; wh.appendChild(s); });
+    for (let i = 0; i < 7; i++) {
+      const s = document.createElement('span');
+      s.textContent = WEEKDAYS[i];
+      wh.appendChild(s);
+    }
     block.appendChild(wh);
 
+    // グリッド
     const grid = document.createElement('div');
     grid.className = 'month-grid';
-
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month+1, 0).getDate();
 
+    // 空セル
     for (let i = 0; i < firstDay; i++) {
       const c = document.createElement('div');
       c.className = 'day-cell empty';
       grid.appendChild(c);
     }
 
+    // 日セル
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateKey = dateToKey(date);
-      const dow = date.getDay();
+      const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dow = new Date(year, month, day).getDay();
       const holidayName = holidays[dateKey];
 
       const cell = document.createElement('div');
-      cell.className = 'day-cell';
-      if (dow === 0) cell.classList.add('sunday');
-      if (dow === 6) cell.classList.add('saturday');
-      if (holidayName) cell.classList.add('holiday');
-      if (isToday(dateKey)) cell.classList.add('today');
-      if (selectedDate === dateKey) cell.classList.add('selected-day');
+      let cls = 'day-cell';
+      if (dow === 0) cls += ' sunday';
+      if (dow === 6) cls += ' saturday';
+      if (holidayName) cls += ' holiday';
+      if (isToday(dateKey)) cls += ' today';
+      if (selectedDate === dateKey) cls += ' selected-day';
+      cell.className = cls;
 
       const numEl = document.createElement('div');
       numEl.className = 'day-number';
@@ -1083,16 +1179,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if (dayEvents.length > 0) {
         const ec = document.createElement('div');
         ec.className = 'day-events';
-        dayEvents.forEach(ev => {
+        for (let i = 0; i < dayEvents.length; i++) {
+          const ev = dayEvents[i];
           const e = document.createElement('div');
           e.className = `day-event-item color-${ev.colorIndex}`;
-          e.textContent = `${ev.time} ${ev.title}`;
+          e.textContent = (ev.time ? ev.time + ' ' : '') + (ev.title || '（無題）');
           ec.appendChild(e);
-        });
+        }
         cell.appendChild(ec);
       }
 
-      cell.addEventListener('click', () => openDetailPanel(dateKey));
+      cell.dataset.date = dateKey;
       grid.appendChild(cell);
     }
 
@@ -1100,33 +1197,35 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     return block;
   }
 
-  // ===== ナビゲーション =====
+  // ===== イベントデリゲーション =====
   document.getElementById('calendar-container').addEventListener('click', (e) => {
-    if (e.target.id === 'btn-prev-month') { baseMonth.setMonth(baseMonth.getMonth()-1); renderAllMonths(); }
-    else if (e.target.id === 'btn-next-month') { baseMonth.setMonth(baseMonth.getMonth()+1); renderAllMonths(); }
+    if (e.target.id === 'btn-prev-month') { baseMonth.setMonth(baseMonth.getMonth()-1); renderAllMonths(); return; }
+    if (e.target.id === 'btn-next-month') { baseMonth.setMonth(baseMonth.getMonth()+1); renderAllMonths(); return; }
+    const cell = e.target.closest('.day-cell:not(.empty)');
+    if (cell && cell.dataset.date) openDetailPanel(cell.dataset.date);
   });
 
   document.getElementById('btn-today').addEventListener('click', () => {
     baseMonth = new Date(); renderAllMonths();
   });
 
-  // ===== 詳細パネル（カレンダー横に表示） =====
+  // ===== 詳細パネル =====
   function openDetailPanel(dateKey) {
     selectedDate = dateKey;
     renderDetailPanel(dateKey);
     const panel = document.getElementById('detail-panel');
     if (panel.classList.contains('hidden')) {
       panel.classList.remove('hidden');
-      if (window.innerWidth <= 768) showOverlay();
+      if (window.innerWidth <= 768) document.getElementById('panel-overlay').classList.add('active');
     }
-    renderAllMonths(); // 選択日のハイライト更新
+    renderAllMonths();
   }
 
   function closeDetailPanel() {
     document.getElementById('detail-panel').classList.add('hidden');
     selectedDate = null;
-    hideOverlay();
-    renderAllMonths(); // 選択日のハイライト解除
+    document.getElementById('panel-overlay').classList.remove('active');
+    renderAllMonths();
   }
 
   function renderDetailPanel(dateKey) {
@@ -1135,24 +1234,36 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const dayEvents = getEventsForDate(dateKey);
 
     if (dayEvents.length === 0) {
-      list.innerHTML = '<p style="text-align:center;color:#9CA3AF;padding:24px;">予定はありません</p>';
+      list.innerHTML = '<div class="detail-no-events">予定はありません</div>';
       return;
     }
 
-    list.innerHTML = '';
-    dayEvents.forEach(ev => {
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < dayEvents.length; i++) {
+      const ev = dayEvents[i];
       const card = document.createElement('div');
       card.className = `detail-event-card color-${ev.colorIndex}`;
-      card.innerHTML = `
-        <div class="detail-event-time">${ev.time}</div>
-        <div class="detail-event-title">${escapeHtml(ev.title)}</div>
-        ${ev.detail ? `<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>` : ''}
-        <div class="detail-event-actions">
-          <button class="edit-btn" data-id="${ev.id}">編集</button>
-          <button class="delete-btn" data-id="${ev.id}" data-group="${ev.groupId || ''}">削除</button>
-        </div>`;
-      list.appendChild(card);
-    });
+
+      let html = '';
+      if (ev.time) {
+        html += `<div class="detail-event-time">${ev.time}</div>`;
+      } else {
+        html += '<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';
+      }
+      html += `<div class="detail-event-title">${escapeHtml(ev.title || '（無題）')}</div>`;
+      if (ev.detail) {
+        html += `<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;
+      }
+      html += `<div class="detail-event-actions">
+        <button class="edit-btn" data-id="${ev.id}">✏️ 編集</button>
+        <button class="delete-btn" data-id="${ev.id}" data-group="${ev.groupId || ''}">🗑️ 削除</button>
+      </div>`;
+
+      card.innerHTML = html;
+      frag.appendChild(card);
+    }
+    list.innerHTML = '';
+    list.appendChild(frag);
   }
 
   document.getElementById('detail-events-list').addEventListener('click', (e) => {
@@ -1171,17 +1282,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   document.getElementById('btn-close-detail').addEventListener('click', closeDetailPanel);
   document.getElementById('btn-add-event').addEventListener('click', openAddModal);
-
-  function showOverlay() {
-    const o = document.getElementById('panel-overlay');
-    o.classList.add('active');
-  }
-
-  function hideOverlay() {
-    const o = document.getElementById('panel-overlay');
-    o.classList.remove('active');
-  }
-
   document.getElementById('panel-overlay').addEventListener('click', closeDetailPanel);
 
   // ===== 予定モーダル =====
@@ -1189,27 +1289,57 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     editingEvent = null;
     document.getElementById('modal-title').textContent = '予定を追加';
     document.getElementById('event-form').reset();
-    document.getElementById('event-time').value = '09:00';
+    document.getElementById('event-time').value = '';
+    document.getElementById('event-title').value = '';
     customDates = []; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI();
+    setDefaultEndDates();
+    document.getElementById('recurrence-group').style.display = '';
+    document.getElementById('extend-end-group').style.display = 'none';
     document.getElementById('event-modal').classList.remove('hidden');
   }
 
   function openEditModal(ev) {
     editingEvent = ev;
     document.getElementById('modal-title').textContent = '予定を編集';
-    document.getElementById('event-time').value = ev.time;
-    document.getElementById('event-title').value = ev.title;
+    document.getElementById('event-time').value = ev.time || '';
+    document.getElementById('event-title').value = ev.title || '';
     document.getElementById('event-detail').value = ev.detail || '';
     resetColorPicker(ev.colorIndex);
     document.getElementById('recurrence-type').value = 'none';
     resetRecurrenceUI();
+
+    // 繰り返し予定の場合、終了日延長を表示
+    if (ev.groupId) {
+      document.getElementById('recurrence-group').style.display = 'none';
+      document.getElementById('extend-end-group').style.display = '';
+      // 現在のグループの最後の日付を取得
+      let lastDate = '';
+      const keys = Object.keys(events);
+      for (let i = 0; i < keys.length; i++) {
+        if (events[keys[i]].some(e => e.groupId === ev.groupId)) {
+          if (keys[i] > lastDate) lastDate = keys[i];
+        }
+      }
+      document.getElementById('extend-end-date').value = lastDate || getDefaultEndDate();
+    } else {
+      document.getElementById('recurrence-group').style.display = '';
+      document.getElementById('extend-end-group').style.display = 'none';
+    }
+
     document.getElementById('event-modal').classList.remove('hidden');
   }
 
   function closeModal() {
     document.getElementById('event-modal').classList.add('hidden');
     editingEvent = null;
+  }
+
+  function setDefaultEndDates() {
+    const def = getDefaultEndDate();
+    document.getElementById('recurrence-end-date').value = def;
+    document.getElementById('monthly-end-date').value = def;
+    document.getElementById('nth-end-date').value = def;
   }
 
   function resetColorPicker(idx) {
@@ -1239,9 +1369,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('recurrence-type').addEventListener('change', (e) => {
     const type = e.target.value;
     document.querySelectorAll('.recurrence-options').forEach(el => el.classList.add('hidden'));
-    if (type === 'weekly') document.getElementById('weekly-options').classList.remove('hidden');
-    else if (type === 'nth-weekday') document.getElementById('nth-weekday-options').classList.remove('hidden');
-    else if (type === 'custom') {
+    if (type === 'weekly') {
+      document.getElementById('weekly-options').classList.remove('hidden');
+    } else if (type === 'monthly') {
+      document.getElementById('monthly-options').classList.remove('hidden');
+      // 選択中の日を初期値に
+      if (selectedDate) {
+        const d = new Date(selectedDate + 'T00:00:00');
+        document.getElementById('monthly-day').value = d.getDate();
+      }
+    } else if (type === 'nth-weekday') {
+      document.getElementById('nth-weekday-options').classList.remove('hidden');
+    } else if (type === 'custom') {
       document.getElementById('custom-options').classList.remove('hidden');
       miniCalMonth = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
       renderMiniCalendar();
@@ -1254,7 +1393,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-close-modal').addEventListener('click', closeModal);
   document.getElementById('btn-cancel-event').addEventListener('click', closeModal);
 
-  // ===== ミニカレンダー（カスタム日付選択） =====
+  // ===== ミニカレンダー =====
   function renderMiniCalendar() {
     const year = miniCalMonth.getFullYear();
     const month = miniCalMonth.getMonth();
@@ -1262,73 +1401,67 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('mini-cal-title').textContent = `${year}年 ${month + 1}月`;
 
     const grid = document.getElementById('mini-cal-grid');
-    grid.innerHTML = '';
-
+    const frag = document.createDocumentFragment();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     for (let i = 0; i < firstDay; i++) {
       const cell = document.createElement('div');
       cell.className = 'mini-cal-day empty';
-      grid.appendChild(cell);
+      frag.appendChild(cell);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateKey = dateToKey(date);
-      const dow = date.getDay();
+      const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dow = new Date(year, month, day).getDay();
 
       const cell = document.createElement('div');
-      cell.className = 'mini-cal-day';
-      if (dow === 0) cell.classList.add('sun');
-      if (dow === 6) cell.classList.add('sat');
-      if (customDates.includes(dateKey)) cell.classList.add('checked');
-
+      let cls = 'mini-cal-day';
+      if (dow === 0) cls += ' sun';
+      if (dow === 6) cls += ' sat';
+      if (customDates.includes(dateKey)) cls += ' checked';
+      cell.className = cls;
       cell.textContent = day;
-      cell.addEventListener('click', () => {
-        toggleCustomDate(dateKey);
-        cell.classList.toggle('checked');
-      });
-
-      grid.appendChild(cell);
+      cell.dataset.date = dateKey;
+      frag.appendChild(cell);
     }
 
+    grid.innerHTML = '';
+    grid.appendChild(frag);
     renderSelectedDatesChips();
   }
 
-  function toggleCustomDate(dateKey) {
-    const idx = customDates.indexOf(dateKey);
-    if (idx === -1) {
-      customDates.push(dateKey);
-      customDates.sort();
-    } else {
-      customDates.splice(idx, 1);
-    }
+  document.getElementById('mini-cal-grid').addEventListener('click', (e) => {
+    const cell = e.target.closest('.mini-cal-day:not(.empty)');
+    if (!cell) return;
+    const dk = cell.dataset.date;
+    const idx = customDates.indexOf(dk);
+    if (idx === -1) { customDates.push(dk); customDates.sort(); }
+    else { customDates.splice(idx, 1); }
+    cell.classList.toggle('checked');
     renderSelectedDatesChips();
-  }
+  });
 
   function renderSelectedDatesChips() {
     const summary = document.getElementById('selected-dates-summary');
     const chips = document.getElementById('selected-dates-chips');
     const count = document.getElementById('selected-count');
-
     if (!summary || !chips || !count) return;
 
-    if (customDates.length === 0) {
-      summary.style.display = 'none';
-      return;
-    }
+    if (customDates.length === 0) { summary.style.display = 'none'; return; }
 
     summary.style.display = 'block';
     count.textContent = customDates.length;
-    chips.innerHTML = '';
 
-    customDates.forEach(dk => {
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < customDates.length; i++) {
       const chip = document.createElement('span');
       chip.className = 'date-chip';
-      chip.innerHTML = `${formatDateShort(dk)} <button data-date="${dk}">✕</button>`;
-      chips.appendChild(chip);
-    });
+      chip.innerHTML = `${formatDateShort(customDates[i])} <button data-date="${customDates[i]}">✕</button>`;
+      frag.appendChild(chip);
+    }
+    chips.innerHTML = '';
+    chips.appendChild(frag);
   }
 
   document.getElementById('selected-dates-chips')?.addEventListener('click', (e) => {
@@ -1352,39 +1485,134 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== フォーム送信 =====
   document.getElementById('event-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    const time = document.getElementById('event-time').value;
+    const time = document.getElementById('event-time').value || '';
     const title = document.getElementById('event-title').value.trim();
     const detail = document.getElementById('event-detail').value.trim();
     const colorIndex = getSelectedColor();
     const recurrenceType = document.getElementById('recurrence-type').value;
 
-    if (!title) return;
-
+    // 編集モード
     if (editingEvent) {
       updateEvent(selectedDate, editingEvent.id, { time, title, detail, colorIndex });
+
+      // 繰り返し予定の終了日延長
+      if (editingEvent.groupId && document.getElementById('extend-end-group').style.display !== 'none') {
+        const newEndDate = document.getElementById('extend-end-date').value;
+        if (newEndDate && editingEvent.recurrenceInfo) {
+          extendRecurringEvents(editingEvent, newEndDate);
+        }
+      }
+
+      saveEvents();
       closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
       return;
     }
 
+    // 新規作成
     if (recurrenceType === 'none') {
       addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
     } else {
-      const dates = generateRecurringDates(recurrenceType, selectedDate);
+      const result = generateRecurringDates(recurrenceType, selectedDate);
+      const dates = result.dates;
+      const recurrenceInfo = result.info;
+
       if (dates.length === 0) {
         addEvent(selectedDate, { id: generateId(), groupId: null, time, title, detail, colorIndex });
       } else {
         const groupId = generateId();
-        dates.forEach(dk => addEvent(dk, { id: generateId(), groupId, time, title, detail, colorIndex }));
+        for (let i = 0; i < dates.length; i++) {
+          addEvent(dates[i], { id: generateId(), groupId, time, title, detail, colorIndex, recurrenceInfo });
+        }
       }
     }
 
+    saveEvents();
     closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
-  // ===== 繰り返し日付生成（N週間ごと対応） =====
+  // ===== 繰り返し終了日の延長 =====
+  function extendRecurringEvents(ev, newEndDate) {
+    const info = ev.recurrenceInfo;
+    if (!info) return;
+
+    // 現在のグループの最後の日付を取得
+    let lastDate = '';
+    const keys = Object.keys(events);
+    for (let i = 0; i < keys.length; i++) {
+      if (events[keys[i]].some(e => e.groupId === ev.groupId)) {
+        if (keys[i] > lastDate) lastDate = keys[i];
+      }
+    }
+
+    if (!lastDate || newEndDate <= lastDate) return;
+
+    // lastDateの翌日から新しい終了日までの日付を生成
+    const startDate = new Date(lastDate + 'T00:00:00');
+    startDate.setDate(startDate.getDate() + 1);
+    const endDate = new Date(newEndDate + 'T23:59:59');
+
+    let newDates = [];
+
+    if (info.type === 'weekly') {
+      let cur = new Date(startDate);
+      cur.setDate(cur.getDate() - cur.getDay());
+      while (cur <= endDate) {
+        for (const dow of (info.days || [])) {
+          const t = new Date(cur);
+          t.setDate(t.getDate() + dow);
+          if (t >= startDate && t <= endDate) newDates.push(dateToKey(t));
+        }
+        cur.setDate(cur.getDate() + 7 * (info.interval || 1));
+      }
+    } else if (info.type === 'monthly') {
+      const dayOfMonth = info.dayOfMonth;
+      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cur <= endDate) {
+        const dim = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+        const actualDay = Math.min(dayOfMonth, dim);
+        const target = new Date(cur.getFullYear(), cur.getMonth(), actualDay);
+        if (target >= startDate && target <= endDate) newDates.push(dateToKey(target));
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    } else if (info.type === 'nth-weekday') {
+      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cur <= endDate) {
+        for (const nth of (info.nths || [])) {
+          const d = getNthWeekday(cur.getFullYear(), cur.getMonth(), info.dow, nth);
+          if (d && d >= startDate && d <= endDate) newDates.push(dateToKey(d));
+        }
+        cur.setMonth(cur.getMonth() + 1);
+      }
+    }
+
+    // 既存のイベントと重複しないもののみ追加
+    const existingDates = new Set();
+    for (let i = 0; i < keys.length; i++) {
+      if (events[keys[i]] && events[keys[i]].some(e => e.groupId === ev.groupId)) {
+        existingDates.add(keys[i]);
+      }
+    }
+
+    for (let i = 0; i < newDates.length; i++) {
+      if (!existingDates.has(newDates[i])) {
+        addEvent(newDates[i], {
+          id: generateId(),
+          groupId: ev.groupId,
+          time: ev.time,
+          title: ev.title,
+          detail: ev.detail,
+          colorIndex: ev.colorIndex,
+          recurrenceInfo: info
+        });
+      }
+    }
+  }
+
+  // ===== 繰り返し日付生成 =====
   function generateRecurringDates(type, startDateKey) {
     const dates = [];
     const startDate = new Date(startDateKey + 'T00:00:00');
+    let info = {};
 
     if (type === 'weekly') {
       const interval = parseInt(document.getElementById('week-interval').value) || 1;
@@ -1394,11 +1622,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
       const endInput = document.getElementById('recurrence-end-date').value;
       const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
-      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 1);
+      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
+
+      info = { type: 'weekly', interval, days: selectedDays };
 
       let cur = new Date(startDate);
-      cur.setDate(cur.getDate() - cur.getDay()); // 週の頭(日曜)に合わせる
-
+      cur.setDate(cur.getDate() - cur.getDay());
       while (cur <= endDate) {
         for (const dow of selectedDays) {
           const t = new Date(cur);
@@ -1407,15 +1636,33 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         }
         cur.setDate(cur.getDate() + 7 * interval);
       }
+    } else if (type === 'monthly') {
+      const dayOfMonth = parseInt(document.getElementById('monthly-day').value);
+      const endInput = document.getElementById('monthly-end-date').value;
+      const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
+      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
+
+      info = { type: 'monthly', dayOfMonth };
+
+      let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      while (cur <= endDate) {
+        const dim = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+        const actualDay = Math.min(dayOfMonth, dim);
+        const target = new Date(cur.getFullYear(), cur.getMonth(), actualDay);
+        if (target >= startDate && target <= endDate) dates.push(dateToKey(target));
+        cur.setMonth(cur.getMonth() + 1);
+      }
     } else if (type === 'nth-weekday') {
       const dow = parseInt(document.getElementById('nth-weekday-day').value);
       const nths = [];
       document.querySelectorAll('.nth-btn.active').forEach(b => nths.push(parseInt(b.dataset.nth)));
-      if (nths.length === 0) return [startDateKey];
+      if (nths.length === 0) return { dates: [startDateKey], info: {} };
 
       const endInput = document.getElementById('nth-end-date').value;
       const endDate = endInput ? new Date(endInput + 'T23:59:59') : new Date(startDate);
-      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 1);
+      if (!endInput) endDate.setFullYear(endDate.getFullYear() + 10);
+
+      info = { type: 'nth-weekday', dow, nths };
 
       let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
       while (cur <= endDate) {
@@ -1427,10 +1674,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
     } else if (type === 'custom') {
       if (customDates.length > 0) dates.push(...customDates);
-      if (dates.length === 0 && !dates.includes(startDateKey)) dates.push(startDateKey);
+      if (dates.length === 0) dates.push(startDateKey);
+      info = { type: 'custom' };
     }
 
-    return [...new Set(dates)].sort();
+    return { dates: [...new Set(dates)].sort(), info };
   }
 
   function getNthWeekday(year, month, dow, nth) {
@@ -1452,7 +1700,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     dialog.classList.remove('hidden');
 
     document.getElementById('confirm-ok').onclick = () => {
-      deleteEvent(selectedDate, eventId); dialog.classList.add('hidden');
+      deleteEvent(selectedDate, eventId); saveEvents(); dialog.classList.add('hidden');
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
@@ -1469,11 +1717,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     dialog.classList.remove('hidden');
 
     document.getElementById('confirm-single').onclick = () => {
-      deleteEvent(selectedDate, eventId); dialog.classList.add('hidden');
+      deleteEvent(selectedDate, eventId); saveEvents(); dialog.classList.add('hidden');
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     document.getElementById('confirm-all').onclick = () => {
-      deleteEventsByGroupId(groupId); dialog.classList.add('hidden');
+      deleteEventsByGroupId(groupId); saveEvents(); dialog.classList.add('hidden');
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     document.getElementById('confirm-cancel').onclick = () => dialog.classList.add('hidden');
@@ -1531,8 +1779,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         const imported = JSON.parse(ev.target.result);
         for (const [dk, evList] of Object.entries(imported)) {
           if (!events[dk]) events[dk] = [];
+          const localIds = new Set(events[dk].map(e => e.id));
           for (const ev of evList) {
-            if (!events[dk].find(x => x.id === ev.id)) events[dk].push(ev);
+            if (!localIds.has(ev.id)) events[dk].push(ev);
           }
         }
         saveEvents(); renderAllMonths();
@@ -1557,6 +1806,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 初期化 =====
   loadEvents();
+  cleanupOldEvents();
   baseMonth = new Date();
   renderAllMonths();
   initFirebase();
