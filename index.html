@@ -435,10 +435,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 </div>
 
 <div id="confirm-dialog" class="modal hidden">
-  <div class="modal-content confirm-content">
+  <div class="modal-content confirm-content" onclick="event.stopPropagation()">
     <h3 id="confirm-title">確認</h3>
     <p id="confirm-message"></p>
-    <div id="confirm-actions" class="form-actions"></div>
+    <div id="confirm-actions" class="form-actions">
+      <button class="secondary-btn" id="cb-cancel">キャンセル</button>
+      <button class="secondary-btn" id="cb-single" style="display:none;color:#DC2626">この日のみ</button>
+      <button class="primary-btn" id="cb-ok" style="background:#DC2626">削除</button>
+    </div>
   </div>
 </div>
 
@@ -490,6 +494,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let firebaseUnsubscribe = null;
   let isSyncingFromFirebase = false;
   let initialLoadDone = false;
+  let lastSyncedJSON = '';
+  let isSyncingToFirebase = false;
 
   // 毎月日セレクタ初期化
   const monthlyDaySelect = document.getElementById('monthly-day');
@@ -591,13 +597,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           if(doc.exists){
             const rd=doc.data(); const rUpd=rd.updatedAt||''; const lUpd=localStorage.getItem(LAST_MODIFIED_KEY)||'';
             if(!initialLoadDone){
-              initialLoadDone=true; mergeEvents(rd.events||{});
+              initialLoadDone=true;
+              if(rUpd>=lUpd){ events=rd.events||{}; }
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-              if(rUpd>lUpd) localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              localStorage.setItem(LAST_MODIFIED_KEY,rUpd>lUpd?rUpd:lUpd);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               syncToFirebase(getNow());
             } else {
+              if(isSyncingToFirebase) return;
+              const remoteJSON=JSON.stringify(rd.events||{});
+              if(remoteJSON===lastSyncedJSON) return;
               isSyncingFromFirebase=true; events=rd.events||{};
+              lastSyncedJSON=remoteJSON;
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               isSyncingFromFirebase=false;
@@ -608,7 +619,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     } catch(err){ console.error('Firebase init error:',err); updateSyncStatus('error','エラー: '+err.message); }
   }
   function mergeEvents(re) { for(const dk of Object.keys(re)){if(!events[dk]){events[dk]=re[dk];}else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id))events[dk].push(r);}}} }
-  function syncToFirebase(ts) { const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return; firebaseDb.collection('calendars').doc(c.userId).set({events,updatedAt:ts||getNow()},{merge:true}).catch(err=>console.error('Sync error:',err)); }
+  function syncToFirebase(ts) { const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return; isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events); firebaseDb.collection('calendars').doc(c.userId).set({events:events,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; }).catch(err=>{ isSyncingToFirebase=false; console.error('Sync error:',err); }); }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
   function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
 
@@ -725,43 +736,42 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-add-event').addEventListener('click',openAddModal);
   document.getElementById('panel-overlay').addEventListener('click',closeDetailPanel);
 
-  // ===== 確認ダイアログ共通 =====
-  let confirmAction = null;
+  // ===== 確認ダイアログ =====
+  const cbCancel = document.getElementById('cb-cancel');
+  const cbSingle = document.getElementById('cb-single');
+  const cbOk = document.getElementById('cb-ok');
+  const confirmDialog = document.getElementById('confirm-dialog');
 
-  document.getElementById('confirm-actions').addEventListener('click',(e)=>{
-    const btn = e.target.closest('button');
-    if(!btn) return;
-    e.stopPropagation();
-    const action = btn.dataset.action;
-    const dialog = document.getElementById('confirm-dialog');
-    if(action==='cancel'){ dialog.classList.add('hidden'); return; }
-    if(confirmAction) confirmAction(action);
-    dialog.classList.add('hidden');
+  function hideConfirm() { confirmDialog.classList.add('hidden'); }
+
+  cbCancel.addEventListener('click', function(){ hideConfirm(); });
+
+  // 現在のダイアログ用コールバック
+  let onOkClick = null;
+  let onSingleClick = null;
+
+  cbOk.addEventListener('click', function(){
+    hideConfirm();
+    if(onOkClick) { onOkClick(); onOkClick=null; onSingleClick=null; }
   });
-
-  function showConfirmDialog(title, message, buttons, onAction) {
-    confirmAction = onAction;
-    document.getElementById('confirm-title').textContent = title;
-    document.getElementById('confirm-message').textContent = message;
-    document.getElementById('confirm-actions').innerHTML = buttons;
-    document.getElementById('confirm-dialog').classList.remove('hidden');
-  }
+  cbSingle.addEventListener('click', function(){
+    hideConfirm();
+    if(onSingleClick) { onSingleClick(); onOkClick=null; onSingleClick=null; }
+  });
 
   // ===== 済み確認 =====
   function showDoneConfirm(eventId,isDone) {
-    const msg=isDone?'この予定を「未完了」に戻しますか？':'この予定を「済」にしますか？';
-    const btnColor=isDone?'#D97706':'#059669';
-    const btnLabel=isDone?'戻す':'済にする';
-    showConfirmDialog(
-      isDone?'未完了に戻す':'予定を完了にする', msg,
-      `<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="primary-btn" data-action="ok" style="background:${btnColor}">${btnLabel}</button>`,
-      (action)=>{
-        if(action==='ok'){
-          updateEvent(selectedDate,eventId,{done:!isDone}); saveEvents();
-          renderDetailPanel(selectedDate); renderAllMonths();
-        }
-      }
-    );
+    document.getElementById('confirm-title').textContent = isDone ? '未完了に戻す' : '予定を完了にする';
+    document.getElementById('confirm-message').textContent = isDone ? 'この予定を「未完了」に戻しますか？' : 'この予定を「済」にしますか？';
+    cbSingle.style.display = 'none';
+    cbOk.textContent = isDone ? '戻す' : '済にする';
+    cbOk.style.background = isDone ? '#D97706' : '#059669';
+    onSingleClick = null;
+    onOkClick = function(){
+      updateEvent(selectedDate, eventId, {done: !isDone});
+      saveEvents(); renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    confirmDialog.classList.remove('hidden');
   }
 
   // ===== 予定モーダル =====
@@ -962,29 +972,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 削除確認 =====
   function showDeleteConfirm(eventId) {
-    showConfirmDialog('予定を削除','この予定を削除してもよろしいですか？',
-      '<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="primary-btn" style="background:#DC2626" data-action="ok">削除</button>',
-      (action)=>{
-        if(action==='ok'){
-          deleteEvent(selectedDate,eventId); saveEvents();
-          renderDetailPanel(selectedDate); renderAllMonths();
-        }
-      }
-    );
+    document.getElementById('confirm-title').textContent = '予定を削除';
+    document.getElementById('confirm-message').textContent = 'この予定を削除してもよろしいですか？';
+    cbSingle.style.display = 'none';
+    cbOk.textContent = '削除';
+    cbOk.style.background = '#DC2626';
+    onSingleClick = null;
+    onOkClick = function(){
+      deleteEvent(selectedDate, eventId); saveEvents();
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    confirmDialog.classList.remove('hidden');
   }
-  function showDeleteGroupConfirm(eventId,groupId) {
-    showConfirmDialog('繰り返し予定の削除','削除する範囲を選択してください。',
-      '<button class="secondary-btn" data-action="cancel">キャンセル</button><button class="secondary-btn" style="color:#DC2626" data-action="single">この日のみ</button><button class="primary-btn" style="background:#DC2626" data-action="all">すべて削除</button>',
-      (action)=>{
-        if(action==='single'){
-          deleteEvent(selectedDate,eventId); saveEvents();
-          renderDetailPanel(selectedDate); renderAllMonths();
-        } else if(action==='all'){
-          deleteEventsByGroupId(groupId); saveEvents();
-          renderDetailPanel(selectedDate); renderAllMonths();
-        }
-      }
-    );
+
+  function showDeleteGroupConfirm(eventId, groupId) {
+    document.getElementById('confirm-title').textContent = '繰り返し予定の削除';
+    document.getElementById('confirm-message').textContent = '削除する範囲を選択してください。';
+    cbSingle.style.display = '';
+    cbOk.textContent = 'すべて削除';
+    cbOk.style.background = '#DC2626';
+    onSingleClick = function(){
+      deleteEvent(selectedDate, eventId); saveEvents();
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    onOkClick = function(){
+      deleteEventsByGroupId(groupId); saveEvents();
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    confirmDialog.classList.remove('hidden');
   }
 
   // ===== 同期設定 =====
@@ -1007,7 +1022,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   });
 
   // 背景クリック
-  document.getElementById('confirm-dialog').addEventListener('click',(e)=>{if(e.target===e.currentTarget){e.currentTarget.classList.add('hidden');confirmAction=null;}});
+  confirmDialog.addEventListener('click',(e)=>{if(e.target===confirmDialog) hideConfirm();});
   document.getElementById('event-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
   document.getElementById('sync-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 
