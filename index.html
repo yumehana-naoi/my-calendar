@@ -277,12 +277,60 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+
+/* Site selector styles */
+.site-selector-wrap {
+  display: flex; align-items: center; gap: 6px; margin-left: 12px;
+}
+.site-selector-wrap select {
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.85rem; background: white; cursor: pointer; font-family: inherit;
+  max-width: 160px;
+}
+.site-selector-wrap select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+}
+
+/* Site management modal */
+.site-list { margin-top: 12px; }
+.site-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 6px; background: white;
+}
+.site-item .site-item-name { font-size: 0.9rem; font-weight: 500; }
+.site-item .site-item-default { font-size: 0.75rem; color: var(--text-light); margin-left: 8px; }
+.site-item-actions { display: flex; gap: 4px; }
+.site-item button.site-rename-btn {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: white; color: var(--text); cursor: pointer; font-size: 0.78rem; transition: all 0.15s;
+}
+.site-item button.site-rename-btn:hover { background: var(--bg); border-color: var(--accent); }
+.site-item button.site-delete-btn {
+  padding: 4px 10px; border: 1px solid #FCA5A5; border-radius: var(--radius);
+  background: white; color: #DC2626; cursor: pointer; font-size: 0.78rem; transition: all 0.15s;
+}
+.site-item button.site-delete-btn:hover { background: #FEF2F2; }
+.site-add-row {
+  display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.site-add-row input {
+  flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; font-family: inherit; background: white;
+}
+.site-add-row input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+}
 </style>
 </head>
 <body>
 
 <header id="app-header">
-  <h1>📅 カレンダー</h1>
+  <h1 id="app-title">📅 カレンダー</h1>
+  <div class="site-selector-wrap">
+    <select id="site-select"></select>
+    <button id="btn-site-manage" class="header-btn" title="拠点管理">⚙</button>
+  </div>
   <div class="header-actions">
     <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
     <button id="btn-today" class="header-btn" title="今日へ移動">今日</button>
@@ -474,15 +522,151 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
+<div id="site-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>拠点管理</h3>
+      <button id="btn-close-site" class="close-btn">✕</button>
+    </div>
+    <div class="site-body">
+      <p class="sync-description">拠点を追加・削除できます。各拠点のデータは独立しています。</p>
+      <div class="site-add-row">
+        <input type="text" id="new-site-name" placeholder="新しい拠点名を入力" maxlength="20">
+        <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+      </div>
+      <div id="site-list" class="site-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Site/Branch switching (runs before main IIFE) =====
+(function() {
+  'use strict';
+  var SITES_KEY = 'calendar_sites';
+  var LAST_SITE_KEY = 'calendar_last_site';
+  var DEFAULT_SITE = '本部';
+
+  function getSiteList() {
+    try {
+      var data = localStorage.getItem(SITES_KEY);
+      if (data) {
+        var list = JSON.parse(data);
+        if (Array.isArray(list) && list.length > 0) return list;
+      }
+    } catch(e) {}
+    return [DEFAULT_SITE];
+  }
+
+  function saveSiteList(list) {
+    localStorage.setItem(SITES_KEY, JSON.stringify(list));
+  }
+
+  function getCurrentSite() {
+    var params = new URLSearchParams(window.location.search);
+    var site = params.get('site');
+    if (site) return site;
+    return '';
+  }
+
+  // Auto-redirect: if no ?site= param, check if this browser has a remembered site
+  var urlSite = getCurrentSite();
+  if (!urlSite) {
+    var lastSite = localStorage.getItem(LAST_SITE_KEY);
+    if (lastSite && lastSite !== DEFAULT_SITE) {
+      // Redirect to the remembered site
+      window.location.href = window.location.pathname + '?site=' + encodeURIComponent(lastSite);
+    }
+  }
+
+  // Remember the current site for this browser
+  function rememberSite(site) {
+    localStorage.setItem(LAST_SITE_KEY, site || DEFAULT_SITE);
+  }
+
+  // ===== Renamed site old data cleanup =====
+  var RENAMED_KEY = 'calendar_renamed_sites';
+
+  // Record old prefix for delayed cleanup (30 days)
+  function recordRenamedSite(oldSiteName) {
+    var list = getRenamedList();
+    var expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + 30);
+    list.push({ prefix: getSitePrefixForCleanup(oldSiteName), expireAt: expireDate.toISOString() });
+    localStorage.setItem(RENAMED_KEY, JSON.stringify(list));
+  }
+
+  function getRenamedList() {
+    try { var d = localStorage.getItem(RENAMED_KEY); return d ? JSON.parse(d) : []; } catch(e) { return []; }
+  }
+
+  function getSitePrefixForCleanup(siteName) {
+    if (!siteName || siteName === DEFAULT_SITE) return '';
+    return 'site_' + siteName + '_';
+  }
+
+  // Clean up expired renamed site data
+  function cleanupRenamedSites() {
+    var list = getRenamedList();
+    if (list.length === 0) return;
+    var now = new Date();
+    var remaining = [];
+    var suffixes = ['calendar_events', 'calendar_sync_config', 'calendar_last_modified', 'calendar_last_cleanup'];
+    for (var i = 0; i < list.length; i++) {
+      if (new Date(list[i].expireAt) <= now) {
+        // Expired: delete old data
+        for (var j = 0; j < suffixes.length; j++) {
+          localStorage.removeItem(list[i].prefix + suffixes[j]);
+        }
+      } else {
+        remaining.push(list[i]);
+      }
+    }
+    if (remaining.length === 0) {
+      localStorage.removeItem(RENAMED_KEY);
+    } else {
+      localStorage.setItem(RENAMED_KEY, JSON.stringify(remaining));
+    }
+  }
+
+  // Run cleanup on every page load
+  cleanupRenamedSites();
+
+  // Determine prefix: default site ('本部') or no site param => empty prefix
+  // Other sites => 'site_NAME_' prefix
+  var currentSite = getCurrentSite();
+  var prefix = '';
+  if (currentSite && currentSite !== DEFAULT_SITE) {
+    prefix = 'site_' + currentSite + '_';
+  }
+
+  // Remember this site for auto-redirect next time
+  rememberSite(currentSite || DEFAULT_SITE);
+
+  window.__currentSitePrefix = prefix;
+  window.__siteUtils = {
+    SITES_KEY: SITES_KEY,
+    LAST_SITE_KEY: LAST_SITE_KEY,
+    DEFAULT_SITE: DEFAULT_SITE,
+    getSiteList: getSiteList,
+    saveSiteList: saveSiteList,
+    getCurrentSite: getCurrentSite,
+    rememberSite: rememberSite,
+    recordRenamedSite: recordRenamedSite
+  };
+})();
+</script>
+
 <script>
 (() => {
   'use strict';
 
   const WEEKDAYS = ['日','月','火','水','木','金','土'];
-  const STORAGE_KEY = 'calendar_events';
-  const SYNC_CONFIG_KEY = 'calendar_sync_config';
-  const LAST_MODIFIED_KEY = 'calendar_last_modified';
-  const CLEANUP_KEY = 'calendar_last_cleanup';
+  const SITE_PREFIX = window.__currentSitePrefix || '';
+  const STORAGE_KEY = SITE_PREFIX + 'calendar_events';
+  const SYNC_CONFIG_KEY = SITE_PREFIX + 'calendar_sync_config';
+  const LAST_MODIFIED_KEY = SITE_PREFIX + 'calendar_last_modified';
+  const CLEANUP_KEY = SITE_PREFIX + 'calendar_last_cleanup';
 
   let events = {};
   let selectedDate = null;
@@ -1032,6 +1216,252 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
+})();
+</script>
+
+<script>
+// ===== Site management code (runs after main IIFE) =====
+(function() {
+  'use strict';
+
+  var utils = window.__siteUtils;
+  var DEFAULT_SITE = utils.DEFAULT_SITE;
+  var getSiteList = utils.getSiteList;
+  var saveSiteList = utils.saveSiteList;
+  var getCurrentSite = utils.getCurrentSite;
+
+  var currentSite = getCurrentSite();
+  var siteSelect = document.getElementById('site-select');
+  var btnSiteManage = document.getElementById('btn-site-manage');
+  var siteModal = document.getElementById('site-modal');
+  var btnCloseSite = document.getElementById('btn-close-site');
+  var btnAddSite = document.getElementById('btn-add-site');
+  var newSiteInput = document.getElementById('new-site-name');
+  var siteListEl = document.getElementById('site-list');
+  var appTitle = document.getElementById('app-title');
+
+  // Update title to show site name when not on default
+  function updateTitle() {
+    var site = currentSite;
+    if (site && site !== DEFAULT_SITE) {
+      appTitle.textContent = '\u{1F4C5} ' + site + ' カレンダー';
+    } else {
+      appTitle.textContent = '\u{1F4C5} カレンダー';
+    }
+  }
+
+  // Populate site selector dropdown
+  function populateSiteSelect() {
+    var sites = getSiteList();
+    siteSelect.innerHTML = '';
+    for (var i = 0; i < sites.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = sites[i];
+      opt.textContent = sites[i];
+      // Select the current site
+      if (currentSite === sites[i] || (!currentSite && sites[i] === DEFAULT_SITE)) {
+        opt.selected = true;
+      }
+      siteSelect.appendChild(opt);
+    }
+  }
+
+  // Handle site switching
+  siteSelect.addEventListener('change', function() {
+    var selected = siteSelect.value;
+    if (selected === DEFAULT_SITE) {
+      // Default site: no URL param, preserves original storage keys
+      window.location.href = window.location.pathname;
+    } else {
+      window.location.href = window.location.pathname + '?site=' + encodeURIComponent(selected);
+    }
+  });
+
+  // Open site management modal
+  btnSiteManage.addEventListener('click', function() {
+    renderSiteList();
+    siteModal.classList.remove('hidden');
+  });
+
+  // Close site management modal
+  btnCloseSite.addEventListener('click', function() {
+    siteModal.classList.add('hidden');
+  });
+
+  // Close on background click
+  siteModal.addEventListener('click', function(e) {
+    if (e.target === siteModal) siteModal.classList.add('hidden');
+  });
+
+  // Get storage key prefix for a site name
+  function getSitePrefix(siteName) {
+    if (!siteName || siteName === DEFAULT_SITE) return '';
+    return 'site_' + siteName + '_';
+  }
+
+  // Copy all calendar data from one site prefix to another (keeps originals intact)
+  function copySiteData(oldSiteName, newSiteName) {
+    var oldPrefix = getSitePrefix(oldSiteName);
+    var newPrefix = getSitePrefix(newSiteName);
+    var suffixes = ['calendar_events', 'calendar_sync_config', 'calendar_last_modified', 'calendar_last_cleanup'];
+    for (var i = 0; i < suffixes.length; i++) {
+      var oldKey = oldPrefix + suffixes[i];
+      var newKey = newPrefix + suffixes[i];
+      var data = localStorage.getItem(oldKey);
+      if (data !== null) {
+        localStorage.setItem(newKey, data);
+      }
+    }
+  }
+
+  // Render site list in management modal
+  function renderSiteList() {
+    var sites = getSiteList();
+    siteListEl.innerHTML = '';
+    for (var i = 0; i < sites.length; i++) {
+      var item = document.createElement('div');
+      item.className = 'site-item';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'site-item-name';
+      nameSpan.textContent = sites[i];
+      if (sites[i] === DEFAULT_SITE) {
+        var defLabel = document.createElement('span');
+        defLabel.className = 'site-item-default';
+        defLabel.textContent = '（デフォルト）';
+        nameSpan.appendChild(defLabel);
+      }
+      item.appendChild(nameSpan);
+      var actionsDiv = document.createElement('div');
+      actionsDiv.className = 'site-item-actions';
+      // Rename button (all sites including default)
+      var renameBtn = document.createElement('button');
+      renameBtn.className = 'site-rename-btn';
+      renameBtn.textContent = '名前変更';
+      renameBtn.dataset.site = sites[i];
+      renameBtn.addEventListener('click', function() {
+        var oldName = this.dataset.site;
+        var newName = prompt('新しい拠点名を入力してください：', oldName);
+        if (!newName || !(newName = newName.trim()) || newName === oldName) return;
+        var list = getSiteList();
+        for (var j = 0; j < list.length; j++) {
+          if (list[j] === newName) { alert('同じ名前の拠点が既に存在します。'); return; }
+        }
+        // Check if the new name has existing old data in localStorage
+        var newPrefix = getSitePrefix(newName);
+        var existingData = localStorage.getItem(newPrefix + 'calendar_events');
+        if (existingData && existingData !== '{}') {
+          var useOld = confirm('「' + newName + '」の以前のデータが見つかりました。\n\n[OK] → 以前のデータを復元する\n[キャンセル] → 現在のデータで上書きする');
+          if (!useOld) {
+            // Overwrite: copy current data to new prefix
+            copySiteData(oldName, newName);
+          }
+          // If useOld: do nothing, existing data at newPrefix is used as-is
+        } else {
+          // No existing data: copy current data to new prefix
+          copySiteData(oldName, newName);
+        }
+        // Schedule old data for cleanup after 30 days
+        utils.recordRenamedSite(oldName);
+        // Update site list
+        for (var j = 0; j < list.length; j++) {
+          if (list[j] === oldName) { list[j] = newName; break; }
+        }
+        saveSiteList(list);
+        // Update default site reference if needed
+        if (oldName === DEFAULT_SITE) {
+          utils.DEFAULT_SITE = newName;
+          DEFAULT_SITE = newName;
+        }
+        // Update last remembered site if it was the renamed one
+        var lastSite = localStorage.getItem(utils.LAST_SITE_KEY);
+        if (lastSite === oldName) {
+          localStorage.setItem(utils.LAST_SITE_KEY, newName);
+        }
+        renderSiteList();
+        populateSiteSelect();
+        // If currently viewing the renamed site, navigate to new name
+        if (currentSite === oldName || (!currentSite && oldName === DEFAULT_SITE)) {
+          utils.rememberSite(newName);
+          if (newName === DEFAULT_SITE) {
+            window.location.href = window.location.pathname;
+          } else {
+            window.location.href = window.location.pathname + '?site=' + encodeURIComponent(newName);
+          }
+        }
+      });
+      actionsDiv.appendChild(renameBtn);
+      // Delete button (not for default site)
+      if (sites[i] !== DEFAULT_SITE) {
+        var delBtn = document.createElement('button');
+        delBtn.className = 'site-delete-btn';
+        delBtn.textContent = '削除';
+        delBtn.dataset.site = sites[i];
+        delBtn.addEventListener('click', function() {
+          var siteName = this.dataset.site;
+          if (confirm('拠点「' + siteName + '」を削除しますか？\n\n※データはlocalStorageに残りますが、拠点一覧からは削除されます。')) {
+            var list = getSiteList();
+            list = list.filter(function(s) { return s !== siteName; });
+            saveSiteList(list);
+            renderSiteList();
+            populateSiteSelect();
+            // If currently viewing the deleted site, navigate to default
+            if (currentSite === siteName) {
+              window.location.href = window.location.pathname;
+            }
+          }
+        });
+        actionsDiv.appendChild(delBtn);
+      }
+      item.appendChild(actionsDiv);
+      siteListEl.appendChild(item);
+    }
+  }
+
+  // Add new site
+  btnAddSite.addEventListener('click', function() {
+    var name = newSiteInput.value.trim();
+    if (!name) {
+      alert('拠点名を入力してください。');
+      return;
+    }
+    var sites = getSiteList();
+    for (var i = 0; i < sites.length; i++) {
+      if (sites[i] === name) {
+        alert('同じ名前の拠点が既に存在します。');
+        return;
+      }
+    }
+    sites.push(name);
+    saveSiteList(sites);
+    newSiteInput.value = '';
+    renderSiteList();
+    populateSiteSelect();
+  });
+
+  // Allow Enter key to add site
+  newSiteInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnAddSite.click();
+    }
+  });
+
+  // Ensure current site exists in the site list
+  if (currentSite && currentSite !== DEFAULT_SITE) {
+    var sites = getSiteList();
+    var found = false;
+    for (var i = 0; i < sites.length; i++) {
+      if (sites[i] === currentSite) { found = true; break; }
+    }
+    if (!found) {
+      sites.push(currentSite);
+      saveSiteList(sites);
+    }
+  }
+
+  // Initialize
+  populateSiteSelect();
+  updateTitle();
 })();
 </script>
 </body>
