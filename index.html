@@ -923,9 +923,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js');
       }
-      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId,storageBucket:config.storageBucket||''});
+      const bucket=config.storageBucket||config.projectId+'.firebasestorage.app';
+      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId,storageBucket:bucket});
       firebaseDb=firebase.firestore();
-      if(config.storageBucket) firebaseStorage=firebase.storage(); else firebaseStorage=null;
+      firebaseStorage=firebase.storage();
       if(firebaseUnsubscribe) firebaseUnsubscribe();
       initialLoadDone=false;
       firebaseUnsubscribe=firebaseDb.collection('calendars').doc(config.userId)
