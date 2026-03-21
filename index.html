@@ -321,6 +321,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .site-add-row input:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
 }
+
+/* Photo styles */
+.photo-input-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.photo-preview-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.photo-preview-wrap { position: relative; display: inline-block; }
+.photo-remove-btn { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #DC2626; color: white; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.detail-event-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); margin-top: 8px; transition: opacity 0.15s; }
+.detail-event-photo:hover { opacity: 0.8; }
+#photo-lightbox { background: rgba(0,0,0,0.9); z-index: 400; cursor: pointer; }
+.lightbox-img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -388,6 +398,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <span class="color-label">赤</span>
           <button type="button" class="color-option" data-color="2" style="background:#E67E22" title="濃いオレンジ"></button>
           <span class="color-label">橙</span>
+        </div>
+      </div>
+
+      <div class="form-group" id="photo-group">
+        <label>写真（任意・1枚）</label>
+        <div class="photo-input-wrap">
+          <input type="file" id="event-photo" accept="image/*" style="display:none">
+          <button type="button" id="btn-select-photo" class="secondary-btn" style="font-size:0.85rem">📷 写真を選択</button>
+          <div id="photo-preview-wrap" class="photo-preview-wrap" style="display:none">
+            <img id="photo-preview-img" class="photo-preview-img">
+            <button type="button" id="btn-remove-photo" class="photo-remove-btn">✕</button>
+          </div>
         </div>
       </div>
 
@@ -539,6 +561,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
+<div id="photo-lightbox" class="modal hidden">
+  <img id="lightbox-img" class="lightbox-img">
+</div>
+
 <script>
 // ===== Site/Branch switching (runs before main IIFE) =====
 (function() {
@@ -674,6 +700,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let baseMonth = new Date();
   let customDates = [];
   let miniCalMonth = new Date();
+  let photoData = null;
   let firebaseDb = null;
   let firebaseUnsubscribe = null;
   let isSyncingFromFirebase = false;
@@ -734,6 +761,58 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     for(let i=0;i<keys.length;i++){if(keys[i]<cutoffKey){delete events[keys[i]]; changed=true;}}
     localStorage.setItem(CLEANUP_KEY,now.toISOString());
     if(changed) saveEvents();
+  }
+
+  // ===== 古い写真の自動削除 =====
+  function cleanupOldPhotos() {
+    const today=dateToKey(new Date());
+    let changed=false; const keys=Object.keys(events);
+    for(let i=0;i<keys.length;i++){
+      if(keys[i]<today && events[keys[i]]){
+        for(let j=0;j<events[keys[i]].length;j++){
+          if(events[keys[i]][j].photo){ delete events[keys[i]][j].photo; changed=true; }
+        }
+      }
+    }
+    if(changed) saveEvents();
+  }
+
+  // ===== 画像圧縮 =====
+  function compressImage(file) {
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=function(e){
+        const img=new Image();
+        img.onload=function(){
+          const maxW=1200; let w=img.width,h=img.height;
+          if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+          const canvas=document.createElement('canvas');
+          canvas.width=w; canvas.height=h;
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,w,h);
+          let result=canvas.toDataURL('image/jpeg',0.7);
+          if(result.length>200*1024){result=canvas.toDataURL('image/jpeg',0.5);}
+          resolve(result);
+        };
+        img.onerror=function(){reject(new Error('画像の読み込みに失敗しました'));};
+        img.src=e.target.result;
+      };
+      reader.onerror=function(){reject(new Error('ファイルの読み込みに失敗しました'));};
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ===== 写真プレビュー =====
+  function resetPhotoPreview(){
+    document.getElementById('photo-preview-wrap').style.display='none';
+    document.getElementById('btn-select-photo').style.display='';
+    document.getElementById('event-photo').value='';
+  }
+  function showPhotoPreview(src){
+    if(!src){resetPhotoPreview();return;}
+    document.getElementById('photo-preview-img').src=src;
+    document.getElementById('photo-preview-wrap').style.display='';
+    document.getElementById('btn-select-photo').style.display='none';
   }
 
   // ===== ストレージ =====
@@ -886,6 +965,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
       html+=`<div class="detail-event-title">${escapeHtml(ev.title||'（無題）')}</div>`;
       if(ev.detail){html+=`<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;}
+      if(ev.photo){html+=`<img class="detail-event-photo" src="${ev.photo}" data-action="show-photo">`;}
       // ボタン
       const doneLabel=ev.done?'↩ 戻す':'✅ 済';
       const doneClass=ev.done?'undone-btn':'done-btn';
@@ -952,7 +1032,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.style.background = isDone ? '#D97706' : '#059669';
     onSingleClick = null;
     onOkClick = function(){
-      updateEvent(selectedDate, eventId, {done: !isDone});
+      const doneUpdates = {done: !isDone};
+      if(!isDone) doneUpdates.photo = undefined;
+      updateEvent(selectedDate, eventId, doneUpdates);
       saveEvents(); renderDetailPanel(selectedDate); renderAllMonths();
     };
     confirmDialog.classList.remove('hidden');
@@ -968,6 +1050,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('edit-date-group').style.display='none';
     customDates=[]; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
+    photoData=null; resetPhotoPreview();
     document.getElementById('recurrence-group').style.display='';
     document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
@@ -983,6 +1066,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
+    photoData=ev.photo||null; showPhotoPreview(photoData);
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1000,6 +1084,27 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   function closeModal() { document.getElementById('event-modal').classList.add('hidden'); editingEvent=null; }
+
+  // ===== 写真イベントリスナー =====
+  document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
+  document.getElementById('event-photo').addEventListener('change',async(e)=>{
+    const file=e.target.files[0]; if(!file)return;
+    try{photoData=await compressImage(file);showPhotoPreview(photoData);}
+    catch(err){alert(err.message);e.target.value='';}
+  });
+  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();});
+
+  // 詳細パネル内の写真クリック→拡大
+  document.getElementById('detail-events-list').addEventListener('click',(e)=>{
+    const photoEl=e.target.closest('[data-action="show-photo"]');
+    if(photoEl){
+      document.getElementById('lightbox-img').src=photoEl.src;
+      document.getElementById('photo-lightbox').classList.remove('hidden');
+      return;
+    }
+  });
+  // ライトボックス閉じる
+  document.getElementById('photo-lightbox').addEventListener('click',()=>{document.getElementById('photo-lightbox').classList.add('hidden');});
 
   function setDefaultEndDates() {
     const def=getDefaultEndDate();
@@ -1072,19 +1177,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex};
+      const updates={time,title,detail,colorIndex,photo:photoData||undefined};
 
-      // 日付変更
+      if(editingEvent.groupId){
+        showEditGroupConfirm(updates, newDate);
+        return;
+      }
+      // 単発予定: 日付変更
       if(newDate&&newDate!==selectedDate){
         moveEvent(selectedDate,newDate,editingEvent.id);
         updateEvent(newDate,editingEvent.id,updates);
       } else {
         updateEvent(selectedDate,editingEvent.id,updates);
-      }
-      // 繰り返し終了日延長
-      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
-        const newEnd=document.getElementById('extend-end-date').value;
-        if(newEnd&&editingEvent.recurrenceInfo) extendRecurringEvents(editingEvent,newEnd);
       }
       saveEvents(); closeModal();
       if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
@@ -1092,15 +1196,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       return;
     }
 
+    const photo=photoData||undefined;
     if(recurrenceType==='none'){
-      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex});
+      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});
     } else {
       const result=generateRecurringDates(recurrenceType,selectedDate);
       const dates=result.dates; const recurrenceInfo=result.info;
-      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex});}
-      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo});}}
+      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});}
+      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photo});}}
     }
-    saveEvents(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+    try{saveEvents();}catch(e){alert('保存に失敗しました。写真の容量が大きすぎる可能性があります。');return;}
+    closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
   // ===== 繰り返し終了日の延長 =====
@@ -1173,6 +1279,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('confirm-title').textContent = '繰り返し予定の削除';
     document.getElementById('confirm-message').textContent = '削除する範囲を選択してください。';
     cbSingle.style.display = '';
+    cbSingle.textContent = 'この日のみ';
     cbOk.textContent = 'すべて削除';
     cbOk.style.background = '#DC2626';
     onSingleClick = function(){
@@ -1181,6 +1288,50 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     };
     onOkClick = function(){
       deleteEventsByGroupId(groupId); saveEvents();
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    confirmDialog.classList.remove('hidden');
+  }
+
+  function showEditGroupConfirm(updates, newDate) {
+    document.getElementById('confirm-title').textContent = '繰り返し予定の編集';
+    document.getElementById('confirm-message').textContent = '変更する範囲を選択してください。';
+    cbSingle.style.display = '';
+    cbSingle.textContent = 'この予定のみ';
+    cbOk.textContent = 'すべて変更';
+    cbOk.style.background = '#2563EB';
+    onSingleClick = function(){
+      if(newDate&&newDate!==selectedDate){
+        moveEvent(selectedDate,newDate,editingEvent.id);
+        updateEvent(newDate,editingEvent.id,updates);
+      } else {
+        updateEvent(selectedDate,editingEvent.id,updates);
+      }
+      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
+        const newEnd=document.getElementById('extend-end-date').value;
+        if(newEnd&&editingEvent.recurrenceInfo) extendRecurringEvents(editingEvent,newEnd);
+      }
+      saveEvents(); closeModal();
+      if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
+      renderDetailPanel(selectedDate); renderAllMonths();
+    };
+    onOkClick = function(){
+      const gid=editingEvent.groupId;
+      const keys=Object.keys(events);
+      for(let i=0;i<keys.length;i++){
+        if(events[keys[i]]){
+          for(let j=0;j<events[keys[i]].length;j++){
+            if(events[keys[i]][j].groupId===gid){
+              Object.assign(events[keys[i]][j],updates);
+            }
+          }
+        }
+      }
+      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
+        const newEnd=document.getElementById('extend-end-date').value;
+        if(newEnd&&editingEvent.recurrenceInfo) extendRecurringEvents(editingEvent,newEnd);
+      }
+      saveEvents(); closeModal();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     confirmDialog.classList.remove('hidden');
@@ -1213,6 +1364,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== 初期化 =====
   loadEvents();
   cleanupOldEvents();
+  cleanupOldPhotos();
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
