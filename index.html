@@ -406,6 +406,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <div class="photo-input-wrap">
           <input type="file" id="event-photo" accept="image/*" style="display:none">
           <button type="button" id="btn-select-photo" class="secondary-btn" style="font-size:0.85rem">📷 写真を選択</button>
+          <span id="photo-count" style="font-size:0.8rem;color:#6B7280"></span>
           <div id="photo-preview-wrap" class="photo-preview-wrap" style="display:none">
             <img id="photo-preview-img" class="photo-preview-img">
             <button type="button" id="btn-remove-photo" class="photo-remove-btn">✕</button>
@@ -803,6 +804,28 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // ===== 写真プレビュー =====
+  const STORAGE_LIMIT_MB = 5;
+  function getStorageUsageMB() {
+    let total=0;
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      total+=key.length+localStorage.getItem(key).length;
+    }
+    return total*2/1024/1024; // UTF-16 = 2 bytes per char
+  }
+  function updatePhotoCount() {
+    const usedMB=getStorageUsageMB();
+    const el=document.getElementById('photo-count');
+    el.textContent='容量 '+usedMB.toFixed(1)+'MB/'+STORAGE_LIMIT_MB+'MB';
+    if(usedMB>=STORAGE_LIMIT_MB*0.8) el.style.color='#DC2626';
+    else el.style.color='#6B7280';
+    const btn=document.getElementById('btn-select-photo');
+    if(usedMB>=STORAGE_LIMIT_MB*0.9 && !photoData){
+      btn.disabled=true; btn.title='ストレージ容量が不足しています';
+    } else {
+      btn.disabled=false; btn.title='';
+    }
+  }
   function resetPhotoPreview(){
     document.getElementById('photo-preview-wrap').style.display='none';
     document.getElementById('btn-select-photo').style.display='';
@@ -1050,7 +1073,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('edit-date-group').style.display='none';
     customDates=[]; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
-    photoData=null; resetPhotoPreview();
+    photoData=null; resetPhotoPreview(); updatePhotoCount();
     document.getElementById('recurrence-group').style.display='';
     document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
@@ -1066,7 +1089,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    photoData=ev.photo||null; showPhotoPreview(photoData);
+    photoData=ev.photo||null; showPhotoPreview(photoData); updatePhotoCount();
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1089,10 +1112,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
   document.getElementById('event-photo').addEventListener('change',async(e)=>{
     const file=e.target.files[0]; if(!file)return;
+    if(getStorageUsageMB()>=STORAGE_LIMIT_MB*0.9&&!editingEvent?.photo){alert('ストレージ容量が不足しています。\n不要な予定や写真を削除してから追加してください。');e.target.value='';return;}
     try{photoData=await compressImage(file);showPhotoPreview(photoData);}
     catch(err){alert(err.message);e.target.value='';}
   });
-  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();});
+  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();updatePhotoCount();});
 
   // 詳細パネル内の写真クリック→拡大
   document.getElementById('detail-events-list').addEventListener('click',(e)=>{
@@ -1554,6 +1578,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             var list = getSiteList();
             list = list.filter(function(s) { return s !== siteName; });
             saveSiteList(list);
+            // Clear last_modified so Firebase data wins when site is recreated
+            var delPrefix = getSitePrefix(siteName);
+            localStorage.removeItem(delPrefix + 'calendar_last_modified');
             renderSiteList();
             populateSiteSelect();
             // If currently viewing the deleted site, navigate to default
