@@ -406,6 +406,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <div class="photo-input-wrap">
           <input type="file" id="event-photo" accept="image/*" style="display:none">
           <button type="button" id="btn-select-photo" class="secondary-btn" style="font-size:0.85rem">📷 写真を選択</button>
+          <span id="photo-count" style="font-size:0.8rem;color:#6B7280"></span>
           <div id="photo-preview-wrap" class="photo-preview-wrap" style="display:none">
             <img id="photo-preview-img" class="photo-preview-img">
             <button type="button" id="btn-remove-photo" class="photo-remove-btn">✕</button>
@@ -702,11 +703,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let miniCalMonth = new Date();
   let photoData = null;
   let firebaseDb = null;
+  let firebaseStorage = null;
   let firebaseUnsubscribe = null;
   let isSyncingFromFirebase = false;
   let initialLoadDone = false;
   let lastSyncedJSON = '';
   let isSyncingToFirebase = false;
+  let photoUsageBytes = 0;
 
   // 毎月日セレクタ初期化
   const monthlyDaySelect = document.getElementById('monthly-day');
@@ -770,7 +773,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     for(let i=0;i<keys.length;i++){
       if(keys[i]<today && events[keys[i]]){
         for(let j=0;j<events[keys[i]].length;j++){
-          if(events[keys[i]][j].photo){ delete events[keys[i]][j].photo; changed=true; }
+          if(events[keys[i]][j].photo){
+            deletePhoto(events[keys[i]][j].photo);
+            delete events[keys[i]][j].photo; changed=true;
+          }
         }
       }
     }
@@ -803,6 +809,39 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // ===== 写真プレビュー =====
+  const STORAGE_LIMIT_GB = 5;
+  function getLocalStorageUsageMB() {
+    let total=0;
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      total+=key.length+localStorage.getItem(key).length;
+    }
+    return total*2/1024/1024;
+  }
+  function updatePhotoCount() {
+    const el=document.getElementById('photo-count');
+    const btn=document.getElementById('btn-select-photo');
+    if(firebaseStorage){
+      // Firebase Storage容量を表示
+      const usedMB=photoUsageBytes/1024/1024;
+      const limitMB=STORAGE_LIMIT_GB*1024;
+      el.textContent='写真容量 '+usedMB.toFixed(1)+'MB/'+STORAGE_LIMIT_GB+'GB';
+      if(usedMB>=limitMB*0.8) el.style.color='#DC2626';
+      else el.style.color='#6B7280';
+      btn.disabled=false; btn.title='';
+    } else {
+      // localStorage容量を表示（フォールバック）
+      const usedMB=getLocalStorageUsageMB();
+      el.textContent='容量 '+usedMB.toFixed(1)+'MB/5MB';
+      if(usedMB>=4) el.style.color='#DC2626';
+      else el.style.color='#6B7280';
+      if(usedMB>=4.5 && !photoData){
+        btn.disabled=true; btn.title='ストレージ容量が不足しています';
+      } else {
+        btn.disabled=false; btn.title='';
+      }
+    }
+  }
   function resetPhotoPreview(){
     document.getElementById('photo-preview-wrap').style.display='none';
     document.getElementById('btn-select-photo').style.display='';
@@ -850,15 +889,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(!window.firebase){
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
+        await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js');
       }
       if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId});
       firebaseDb=firebase.firestore();
+      firebaseStorage=firebase.storage();
       if(firebaseUnsubscribe) firebaseUnsubscribe();
       initialLoadDone=false;
       firebaseUnsubscribe=firebaseDb.collection('calendars').doc(config.userId)
         .onSnapshot((doc)=>{
           if(doc.exists){
             const rd=doc.data(); const rUpd=rd.updatedAt||''; const lUpd=localStorage.getItem(LAST_MODIFIED_KEY)||'';
+            if(typeof rd.photoUsageBytes==='number') photoUsageBytes=rd.photoUsageBytes;
             if(!initialLoadDone){
               initialLoadDone=true;
               if(rUpd>=lUpd){ events=rd.events||{}; }
@@ -885,6 +927,56 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function syncToFirebase(ts) { const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return; isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events); firebaseDb.collection('calendars').doc(c.userId).set({events:events,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; }).catch(err=>{ isSyncingToFirebase=false; console.error('Sync error:',err); }); }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
   function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
+
+  // ===== Firebase Storage 写真管理 =====
+  function dataUrlToBlob(dataUrl) {
+    const parts=dataUrl.split(','); const mime=parts[0].match(/:(.*?);/)[1];
+    const bin=atob(parts[1]); const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }
+
+  async function uploadPhoto(dataUrl) {
+    if(!firebaseStorage) return dataUrl; // フォールバック: base64のまま
+    const c=loadSyncConfig(); if(!c?.userId) return dataUrl;
+    try {
+      const blob=dataUrlToBlob(dataUrl);
+      const photoId=generateId();
+      const ref=firebaseStorage.ref('photos/'+c.userId+'/'+photoId+'.jpg');
+      await ref.put(blob);
+      const url=await ref.getDownloadURL();
+      // 容量カウント更新
+      if(firebaseDb){
+        firebaseDb.collection('calendars').doc(c.userId).update({
+          photoUsageBytes:firebase.firestore.FieldValue.increment(blob.size)
+        }).catch(()=>{});
+        photoUsageBytes+=blob.size;
+      }
+      return url;
+    } catch(err) {
+      console.error('Photo upload error:',err);
+      return dataUrl; // フォールバック
+    }
+  }
+
+  async function deletePhoto(photoUrl) {
+    if(!firebaseStorage||!photoUrl||photoUrl.startsWith('data:')) return;
+    const c=loadSyncConfig(); if(!c?.userId) return;
+    try {
+      const ref=firebaseStorage.refFromURL(photoUrl);
+      const meta=await ref.getMetadata();
+      const size=meta.size||0;
+      await ref.delete();
+      if(firebaseDb){
+        firebaseDb.collection('calendars').doc(c.userId).update({
+          photoUsageBytes:firebase.firestore.FieldValue.increment(-size)
+        }).catch(()=>{});
+        photoUsageBytes=Math.max(0,photoUsageBytes-size);
+      }
+    } catch(err) {
+      if(err.code!=='storage/object-not-found') console.error('Photo delete error:',err);
+    }
+  }
 
   // ===== カレンダー描画 =====
   function renderAllMonths() {
@@ -1033,7 +1125,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     onSingleClick = null;
     onOkClick = function(){
       const doneUpdates = {done: !isDone};
-      if(!isDone) doneUpdates.photo = undefined;
+      if(!isDone){
+        const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
+        if(ev&&ev.photo) deletePhoto(ev.photo);
+        doneUpdates.photo = undefined;
+      }
       updateEvent(selectedDate, eventId, doneUpdates);
       saveEvents(); renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1050,7 +1146,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('edit-date-group').style.display='none';
     customDates=[]; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
-    photoData=null; resetPhotoPreview();
+    photoData=null; resetPhotoPreview(); updatePhotoCount();
     document.getElementById('recurrence-group').style.display='';
     document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
@@ -1066,7 +1162,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    photoData=ev.photo||null; showPhotoPreview(photoData);
+    photoData=ev.photo||null; showPhotoPreview(photoData); updatePhotoCount();
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1089,10 +1185,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
   document.getElementById('event-photo').addEventListener('change',async(e)=>{
     const file=e.target.files[0]; if(!file)return;
+    if(!firebaseStorage&&getLocalStorageUsageMB()>=4.5&&!editingEvent?.photo){alert('ストレージ容量が不足しています。\n不要な予定や写真を削除してから追加してください。');e.target.value='';return;}
     try{photoData=await compressImage(file);showPhotoPreview(photoData);}
     catch(err){alert(err.message);e.target.value='';}
   });
-  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();});
+  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();updatePhotoCount();});
 
   // 詳細パネル内の写真クリック→拡大
   document.getElementById('detail-events-list').addEventListener('click',(e)=>{
@@ -1167,7 +1264,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('mini-cal-next').addEventListener('click',()=>{miniCalMonth.setMonth(miniCalMonth.getMonth()+1);renderMiniCalendar();});
 
   // ===== フォーム送信 =====
-  document.getElementById('event-form').addEventListener('submit',(e)=>{
+  document.getElementById('event-form').addEventListener('submit',async(e)=>{
     e.preventDefault();
     const time=document.getElementById('event-time').value||'';
     const title=document.getElementById('event-title').value.trim();
@@ -1175,9 +1272,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const colorIndex=getSelectedColor();
     const recurrenceType=document.getElementById('recurrence-type').value;
 
+    // 写真アップロード（Firebase Storage対応）
+    let photo=undefined;
+    if(photoData){
+      if(photoData.startsWith('data:')){
+        photo=await uploadPhoto(photoData);
+      } else {
+        photo=photoData; // 既にURL
+      }
+    }
+    // 編集時に既存写真が削除された場合、Storageからも削除
+    if(editingEvent&&editingEvent.photo&&!photoData){
+      deletePhoto(editingEvent.photo);
+    }
+
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex,photo:photoData||undefined};
+      const updates={time,title,detail,colorIndex,photo:photo||undefined};
 
       if(editingEvent.groupId){
         showEditGroupConfirm(updates, newDate);
@@ -1196,7 +1307,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       return;
     }
 
-    const photo=photoData||undefined;
     if(recurrenceType==='none'){
       addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});
     } else {
@@ -1205,7 +1315,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});}
       else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photo});}}
     }
-    try{saveEvents();}catch(e){alert('保存に失敗しました。写真の容量が大きすぎる可能性があります。');return;}
+    try{saveEvents();}catch(e){alert('保存に失敗しました。');return;}
     closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
@@ -1269,6 +1379,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.style.background = '#DC2626';
     onSingleClick = null;
     onOkClick = function(){
+      const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
+      if(ev&&ev.photo) deletePhoto(ev.photo);
       deleteEvent(selectedDate, eventId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1283,10 +1395,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.textContent = 'すべて削除';
     cbOk.style.background = '#DC2626';
     onSingleClick = function(){
+      const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
+      if(ev&&ev.photo) deletePhoto(ev.photo);
       deleteEvent(selectedDate, eventId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     onOkClick = function(){
+      const keys=Object.keys(events);
+      for(let i=0;i<keys.length;i++){if(events[keys[i]]){for(let j=0;j<events[keys[i]].length;j++){const ev=events[keys[i]][j];if(ev.groupId===groupId&&ev.photo) deletePhoto(ev.photo);}}}
       deleteEventsByGroupId(groupId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1322,6 +1438,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         if(events[keys[i]]){
           for(let j=0;j<events[keys[i]].length;j++){
             if(events[keys[i]][j].groupId===gid){
+              if(events[keys[i]][j].photo&&events[keys[i]][j].photo!==updates.photo) deletePhoto(events[keys[i]][j].photo);
               Object.assign(events[keys[i]][j],updates);
             }
           }
@@ -1554,6 +1671,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             var list = getSiteList();
             list = list.filter(function(s) { return s !== siteName; });
             saveSiteList(list);
+            // Clear last_modified so Firebase data wins when site is recreated
+            var delPrefix = getSitePrefix(siteName);
+            localStorage.removeItem(delPrefix + 'calendar_last_modified');
             renderSiteList();
             populateSiteSelect();
             // If currently viewing the deleted site, navigate to default
