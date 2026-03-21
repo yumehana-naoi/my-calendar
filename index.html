@@ -342,6 +342,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     <button id="btn-site-manage" class="header-btn" title="拠点管理">⚙</button>
   </div>
   <div class="header-actions">
+    <span id="doc-size-display" style="font-size:0.7rem;color:#6B7280;white-space:nowrap"></span>
     <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
     <button id="btn-today" class="header-btn" title="今日へ移動">今日</button>
   </div>
@@ -528,6 +529,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <div class="form-group"><label>API Key</label><input type="text" id="fb-apiKey" placeholder="AIza..."></div>
       <div class="form-group"><label>Auth Domain</label><input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com"></div>
       <div class="form-group"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="your-project-id"></div>
+      <div class="form-group"><label>Storage Bucket</label><input type="text" id="fb-storageBucket" placeholder="your-project-id.appspot.com"></div>
       <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
       <div class="form-actions">
         <button id="btn-save-sync" class="primary-btn">保存して接続</button>
@@ -761,26 +763,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(last){if((now-new Date(last))/86400000<7) return;}
     const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-3); const cutoffKey=dateToKey(cutoff);
     let changed=false; const keys=Object.keys(events);
-    for(let i=0;i<keys.length;i++){if(keys[i]<cutoffKey){delete events[keys[i]]; changed=true;}}
+    for(let i=0;i<keys.length;i++){
+      if(keys[i]<cutoffKey){
+        // 3ヶ月以上前の予定削除時、写真もStorageから確実に削除
+        if(events[keys[i]]){
+          for(let j=0;j<events[keys[i]].length;j++){
+            if(events[keys[i]][j].photo) deletePhoto(events[keys[i]][j].photo);
+          }
+        }
+        delete events[keys[i]]; changed=true;
+      }
+    }
     localStorage.setItem(CLEANUP_KEY,now.toISOString());
     if(changed) saveEvents();
   }
 
   // ===== 古い写真の自動削除 =====
   function cleanupOldPhotos() {
-    const today=dateToKey(new Date());
-    let changed=false; const keys=Object.keys(events);
-    for(let i=0;i<keys.length;i++){
-      if(keys[i]<today && events[keys[i]]){
-        for(let j=0;j<events[keys[i]].length;j++){
-          if(events[keys[i]][j].photo){
-            deletePhoto(events[keys[i]][j].photo);
-            delete events[keys[i]][j].photo; changed=true;
-          }
-        }
-      }
-    }
-    if(changed) saveEvents();
+    // 写真の自動削除は行わない（3ヶ月後の予定削除時にcleanupOldEventsで一括削除）
+    // 済マーク時も写真は残す
   }
 
   // ===== 画像圧縮 =====
@@ -810,6 +811,37 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 写真プレビュー =====
   const STORAGE_LIMIT_GB = 5;
+  function estimateDocSizeKB() {
+    // Firestoreドキュメントのサイズを概算（eventsのJSON文字列のバイト数）
+    try {
+      const json=JSON.stringify(events);
+      // UTF-8エンコード: 日本語は3バイト、英数字は1バイト
+      let bytes=0;
+      for(let i=0;i<json.length;i++){
+        const c=json.charCodeAt(i);
+        if(c<=0x7F) bytes+=1;
+        else if(c<=0x7FF) bytes+=2;
+        else bytes+=3;
+      }
+      // Firestoreオーバーヘッド（フィールド名、メタデータ等）を加算
+      bytes+=200;
+      return bytes/1024;
+    } catch{ return 0; }
+  }
+  function updateDocSizeDisplay() {
+    const el=document.getElementById('doc-size-display');
+    if(!el) return;
+    if(!firebaseDb){ el.textContent=''; return; }
+    const kb=estimateDocSizeKB();
+    if(kb>=1024){
+      el.textContent=(kb/1024).toFixed(1)+'MB/1MB';
+    } else {
+      el.textContent=Math.round(kb)+'KB/1MB';
+    }
+    if(kb>=900) el.style.color='#DC2626';
+    else if(kb>=700) el.style.color='#F59E0B';
+    else el.style.color='#6B7280';
+  }
   function getLocalStorageUsageMB() {
     let total=0;
     for(let i=0;i<localStorage.length;i++){
@@ -891,9 +923,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js');
       }
-      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId});
+      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId,storageBucket:config.storageBucket||''});
       firebaseDb=firebase.firestore();
-      firebaseStorage=firebase.storage();
+      if(config.storageBucket) firebaseStorage=firebase.storage(); else firebaseStorage=null;
       if(firebaseUnsubscribe) firebaseUnsubscribe();
       initialLoadDone=false;
       firebaseUnsubscribe=firebaseDb.collection('calendars').doc(config.userId)
@@ -984,6 +1016,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const f=document.createDocumentFragment();
     for(let o=0;o<2;o++){const m=new Date(baseMonth.getFullYear(),baseMonth.getMonth()+o,1); f.appendChild(renderMonth(m,o===0));}
     c.innerHTML=''; c.appendChild(f);
+    updateDocSizeDisplay();
   }
 
   function renderMonth(monthDate,showNav) {
@@ -1125,11 +1158,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     onSingleClick = null;
     onOkClick = function(){
       const doneUpdates = {done: !isDone};
-      if(!isDone){
-        const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
-        if(ev&&ev.photo) deletePhoto(ev.photo);
-        doneUpdates.photo = undefined;
-      }
+      // 済マークでは写真を削除しない（写真はそのまま残す）
       updateEvent(selectedDate, eventId, doneUpdates);
       saveEvents(); renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1456,12 +1485,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 同期設定 =====
   document.getElementById('btn-sync').addEventListener('click',()=>{
-    const c=loadSyncConfig();if(c){document.getElementById('fb-apiKey').value=c.apiKey||'';document.getElementById('fb-authDomain').value=c.authDomain||'';document.getElementById('fb-projectId').value=c.projectId||'';document.getElementById('fb-userId').value=c.userId||'';}
+    const c=loadSyncConfig();if(c){document.getElementById('fb-apiKey').value=c.apiKey||'';document.getElementById('fb-authDomain').value=c.authDomain||'';document.getElementById('fb-projectId').value=c.projectId||'';document.getElementById('fb-storageBucket').value=c.storageBucket||'';document.getElementById('fb-userId').value=c.userId||'';}
     document.getElementById('sync-modal').classList.remove('hidden');
   });
   document.getElementById('btn-close-sync').addEventListener('click',()=>document.getElementById('sync-modal').classList.add('hidden'));
   document.getElementById('btn-save-sync').addEventListener('click',()=>{
-    const config={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),userId:document.getElementById('fb-userId').value.trim()};
+    const config={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),storageBucket:document.getElementById('fb-storageBucket').value.trim(),userId:document.getElementById('fb-userId').value.trim()};
     localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(config));initFirebase();
   });
   document.getElementById('btn-disconnect-sync').addEventListener('click',()=>{if(firebaseUnsubscribe){firebaseUnsubscribe();firebaseUnsubscribe=null;}firebaseDb=null;initialLoadDone=false;localStorage.removeItem(SYNC_CONFIG_KEY);updateSyncStatus('','切断しました');});
