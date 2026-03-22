@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>カレンダー</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1732,6 +1735,31 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   renderAllMonths();
   initFirebase();
 
+
+  // バックグラウンド復帰時にFirestoreから最新データを取得（送信はしない）
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'&&firebaseDb){
+      const c=loadSyncConfig();
+      if(!c||!c.userId) return;
+      firebaseDb.collection('calendars').doc(c.userId).get().then((doc)=>{
+        if(doc.exists){
+          const rd=doc.data();
+          const remoteJSON=JSON.stringify(rd.events||{});
+          if(remoteJSON===lastSyncedJSON) return;
+          if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+          isSyncingFromFirebase=true;
+          events=rd.events||{};
+          deduplicateEvents();
+          lastSyncedJSON=JSON.stringify(events);
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+          localStorage.setItem(LAST_MODIFIED_KEY,rd.updatedAt||getNow());
+          showSyncBar('✓ 最新データを取得','#059669',true);
+          renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+          isSyncingFromFirebase=false;
+        }
+      }).catch(()=>{});
+    }
+  });
 
   // iPadのbfcache復帰時にボタン状態をリセット
   window.addEventListener('pageshow',function(e){
