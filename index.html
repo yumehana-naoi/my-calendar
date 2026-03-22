@@ -780,7 +780,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
     }
     localStorage.setItem(CLEANUP_KEY,now.toISOString());
-    if(changed) saveEvents();
+    if(changed) localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
   }
 
   // ===== 画像圧縮 =====
@@ -1747,7 +1747,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           if(!curEvents[dk]){curEvents[dk]=oldEvents[dk];merged=true;}
           else{const ids=new Set(curEvents[dk].map(e=>e.id));for(const ev of oldEvents[dk]){if(!ids.has(ev.id)){curEvents[dk].push(ev);merged=true;}}}
         }
-        if(merged){events=curEvents;saveEvents();}
+        if(merged){events=curEvents;localStorage.setItem(STORAGE_KEY,JSON.stringify(events));}
         localStorage.removeItem('calendar_events');
         localStorage.removeItem('calendar_last_modified');
         localStorage.removeItem('calendar_last_cleanup');
@@ -1757,7 +1757,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   })();
   autoExtendRecurringEvents();
   deduplicateEvents();
-  saveEvents();
+  // Firestore接続前はlocalStorageのみ保存（pendingSyncをセットしない）
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
