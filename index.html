@@ -921,7 +921,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // ===== Firebase同期 =====
-  function loadSyncConfig() { try{return JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY));}catch{return null;} }
+  const SYNC_COMMON_KEY = 'calendar_sync_common'; // Firebase接続情報（全拠点共通）
+  function loadSyncConfig() {
+    try{
+      // 拠点固有設定（userId）
+      const site=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};
+      // 共通設定（apiKey, projectId等）
+      const common=JSON.parse(localStorage.getItem(SYNC_COMMON_KEY))||{};
+      // 旧形式: 拠点キーに全情報が入っている場合は共通部分を移行
+      if(site.apiKey&&!common.apiKey){
+        common.apiKey=site.apiKey; common.authDomain=site.authDomain||'';
+        common.projectId=site.projectId; common.storageBucket=site.storageBucket||'';
+        localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
+      }
+      const merged={...common,...site};
+      if(!merged.apiKey&&!merged.projectId&&!merged.userId) return null;
+      return merged;
+    }catch{return null;}
+  }
   async function initFirebase() {
     const config=loadSyncConfig();
     if(!config||!config.apiKey||!config.projectId||!config.userId) return;
@@ -956,7 +973,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         .onSnapshot((doc)=>{
           if(doc.exists){
             const rd=doc.data(); const rUpd=rd.updatedAt||''; const lUpd=localStorage.getItem(LAST_MODIFIED_KEY)||'';
-            if(typeof rd.photoUsageBytes==='number') photoUsageBytes=rd.photoUsageBytes;
+            if(typeof rd.photoUsageBytes==='number'){
+              photoUsageBytes=Math.max(0,rd.photoUsageBytes);
+              if(rd.photoUsageBytes<0){
+                firebaseDb.collection('calendars').doc(config.userId).update({photoUsageBytes:0}).catch(()=>{});
+              }
+            }
             if(!initialLoadDone){
               initialLoadDone=true;
               if(rUpd>=lUpd){ events=rd.events||{}; }
@@ -1041,10 +1063,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       const meta=await ref.getMetadata();
       const size=meta.size||0;
       await ref.delete();
-      if(firebaseDb){
-        firebaseDb.collection('calendars').doc(c.userId).update({
-          photoUsageBytes:firebase.firestore.FieldValue.increment(-size)
-        }).catch(()=>{});
+      if(firebaseDb&&size>0){
+        const decrement=Math.min(size,photoUsageBytes);
+        if(decrement>0){
+          firebaseDb.collection('calendars').doc(c.userId).update({
+            photoUsageBytes:firebase.firestore.FieldValue.increment(-decrement)
+          }).catch(()=>{});
+        }
         photoUsageBytes=Math.max(0,photoUsageBytes-size);
       }
     } catch(err) {
@@ -1391,7 +1416,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});}
       else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photo});}}
     }
-    try{saveEvents();}catch(e){restoreBtn();alert('保存に失敗しました。');return;}
+    try{saveEvents();}catch(e){console.warn('localStorage保存エラー:',e);}
     restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
@@ -1579,15 +1604,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== 同期設定 =====
   document.getElementById('btn-sync').addEventListener('click',()=>{
-    const c=loadSyncConfig();if(c){document.getElementById('fb-apiKey').value=c.apiKey||'';document.getElementById('fb-authDomain').value=c.authDomain||'';document.getElementById('fb-projectId').value=c.projectId||'';document.getElementById('fb-storageBucket').value=c.storageBucket||'';document.getElementById('fb-userId').value=c.userId||'';}
+    const c=loadSyncConfig();
+    if(c){
+      document.getElementById('fb-apiKey').value=c.apiKey||'';
+      document.getElementById('fb-authDomain').value=c.authDomain||'';
+      document.getElementById('fb-projectId').value=c.projectId||'';
+      document.getElementById('fb-storageBucket').value=c.storageBucket||'';
+      document.getElementById('fb-userId').value=c.userId||'';
+    }
     document.getElementById('sync-modal').classList.remove('hidden');
   });
   document.getElementById('btn-close-sync').addEventListener('click',()=>document.getElementById('sync-modal').classList.add('hidden'));
   document.getElementById('btn-save-sync').addEventListener('click',()=>{
-    const config={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),storageBucket:document.getElementById('fb-storageBucket').value.trim(),userId:document.getElementById('fb-userId').value.trim()};
-    localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(config));initFirebase();
+    const common={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),storageBucket:document.getElementById('fb-storageBucket').value.trim()};
+    const site={userId:document.getElementById('fb-userId').value.trim()};
+    localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
+    localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
+    initFirebase();
   });
-  document.getElementById('btn-disconnect-sync').addEventListener('click',()=>{if(firebaseUnsubscribe){firebaseUnsubscribe();firebaseUnsubscribe=null;}firebaseDb=null;initialLoadDone=false;localStorage.removeItem(SYNC_CONFIG_KEY);updateSyncStatus('','切断しました');});
+  document.getElementById('btn-disconnect-sync').addEventListener('click',()=>{if(firebaseUnsubscribe){firebaseUnsubscribe();firebaseUnsubscribe=null;}firebaseDb=null;firebaseStorage=null;initialLoadDone=false;localStorage.removeItem(SYNC_CONFIG_KEY);updateSyncStatus('','切断しました');updateDocSizeDisplay();updatePhotoCount();});
   document.getElementById('btn-export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(events,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`calendar-backup-${dateToKey(new Date())}.json`;a.click();URL.revokeObjectURL(url);});
   document.getElementById('btn-import').addEventListener('click',()=>document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change',(e)=>{
