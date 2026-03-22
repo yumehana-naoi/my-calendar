@@ -698,6 +698,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   const SYNC_CONFIG_KEY = SITE_PREFIX + 'calendar_sync_config';
   const LAST_MODIFIED_KEY = SITE_PREFIX + 'calendar_last_modified';
   const CLEANUP_KEY = SITE_PREFIX + 'calendar_last_cleanup';
+  const PENDING_SYNC_KEY = SITE_PREFIX + 'pendingSync';
 
   let events = {};
   let selectedDate = null;
@@ -896,7 +897,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const now=getNow();
     localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
     localStorage.setItem(LAST_MODIFIED_KEY,now);
-    localStorage.setItem('pendingSync','1');
+    localStorage.setItem(PENDING_SYNC_KEY,'1');
     if(!isSyncingFromFirebase){ if(firebaseDb) showSyncBar('☁️ 同期中...','#2563EB',false); syncToFirebase(now); }
   }
   function addEvent(dk,ev) { if(!events[dk]) events[dk]=[]; events[dk].push(ev); }
@@ -980,7 +981,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             if(!initialLoadDone){
               initialLoadDone=true;
               if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-              const pending=localStorage.getItem('pendingSync');
+              localStorage.removeItem('pendingSync'); // 旧形式クリア
+              const pending=localStorage.getItem(PENDING_SYNC_KEY);
               if(pending){
                 // 未同期のローカル変更がある → タイムスタンプ比較
                 const localTime=localStorage.getItem(LAST_MODIFIED_KEY)||'';
@@ -989,7 +991,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
                   syncToFirebase(getNow());
                 } else {
                   // Firestoreの方が新しい → Firestoreを採用（古いpendingSyncを破棄）
-                  localStorage.removeItem('pendingSync');
+                  localStorage.removeItem(PENDING_SYNC_KEY);
                   events=rd.events||{};
                 }
               } else {
@@ -1057,7 +1059,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const payload=JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:ts||getNow()}));
     isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
     try{
-      firebaseDb.collection('calendars').doc(c.userId).set(payload).then(()=>{ isSyncingToFirebase=false; localStorage.removeItem('pendingSync'); updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
+      firebaseDb.collection('calendars').doc(c.userId).set(payload).then(()=>{ isSyncingToFirebase=false; localStorage.removeItem(PENDING_SYNC_KEY); updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
     }catch(e){ isSyncingToFirebase=false; showSyncBar('✕ 同期エラー: '+e.message,'#DC2626',false); }
   }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
@@ -1187,11 +1189,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-refresh').addEventListener('click',()=>{
     const btn=document.getElementById('btn-refresh');
     btn.style.animation='spin 1s linear infinite';
-    if(localStorage.getItem('pendingSync')&&firebaseDb){
+    if(localStorage.getItem(PENDING_SYNC_KEY)&&firebaseDb){
       const c=loadSyncConfig();
       if(c?.userId){
         firebaseDb.collection('calendars').doc(c.userId).set(JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:getNow()}))).then(()=>{
-          localStorage.removeItem('pendingSync');
+          localStorage.removeItem(PENDING_SYNC_KEY);
           window.location.reload();
         }).catch(()=>{ window.location.reload(); });
         return;
@@ -1566,7 +1568,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         extended=true;
       }
     }
-    if(extended){ saveEvents(); console.log('繰り返し予定を自動延長しました'); }
+    if(extended){ localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); console.log('繰り返し予定を自動延長しました'); }
   }
 
   // ===== 繰り返し日付生成 =====
@@ -1929,7 +1931,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           copySiteData(oldName, newName);
         }
         // pendingSyncをクリア（旧データでFirestoreを上書きしないように）
-        localStorage.removeItem('pendingSync');
+        // 旧拠点・新拠点の両方をクリア
+        var oldSyncPrefix = getSitePrefix(oldName);
+        var newSyncPrefix = getSitePrefix(newName);
+        localStorage.removeItem(oldSyncPrefix + 'pendingSync');
+        localStorage.removeItem(newSyncPrefix + 'pendingSync');
+        localStorage.removeItem('pendingSync'); // プレフィックスなしの旧形式もクリア
         // Schedule old data for cleanup after 30 days
         utils.recordRenamedSite(oldName);
         // Update site list
