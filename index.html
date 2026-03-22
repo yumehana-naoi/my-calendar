@@ -86,14 +86,10 @@ body {
 }
 .month-nav button:hover { background: var(--bg); }
 
-.weekday-header {
-  display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+.weekday-cell {
   text-align: center; font-size: 0.8rem; font-weight: 600;
-  padding: 8px 0 4px;
+  padding: 6px 4px;
 }
-.weekday-header span { padding: 4px; }
-.weekday-header span:first-child { color: var(--sunday); }
-.weekday-header span:last-child { color: var(--saturday); }
 
 .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 8px; }
 
@@ -264,7 +260,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .day-number { font-size: 0.75rem; }
   .day-event-item { font-size: 0.55rem; padding: 1px 3px; }
   .holiday-name { font-size: 0.5rem; }
-  .weekday-header { font-size: 0.7rem; }
+  .weekday-cell { font-size: 0.7rem; }
   .month-header h2 { font-size: 1.1rem; }
 }
 @media (max-width: 480px) {
@@ -1131,10 +1127,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const header=document.createElement('div'); header.className='month-header';
     header.innerHTML=`<h2>${year}年 ${month+1}月</h2>${showNav?'<div class="month-nav"><button id="btn-prev-month">◀</button><button id="btn-next-month">▶</button></div>':''}`;
     block.appendChild(header);
-    const wh=document.createElement('div'); wh.className='weekday-header';
-    for(let i=0;i<7;i++){const s=document.createElement('span');s.textContent=WEEKDAYS[i];wh.appendChild(s);}
-    block.appendChild(wh);
     const grid=document.createElement('div'); grid.className='month-grid';
+    for(let i=0;i<7;i++){const s=document.createElement('span');s.className='weekday-cell';if(i===0)s.style.color='var(--sunday)';if(i===6)s.style.color='var(--saturday)';s.textContent=WEEKDAYS[i];grid.appendChild(s);}
     const firstDay=new Date(year,month,1).getDay();
     const daysInMonth=new Date(year,month+1,0).getDate();
     for(let i=0;i<firstDay;i++){const c=document.createElement('div');c.className='day-cell empty';grid.appendChild(c);}
