@@ -1156,33 +1156,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   });
   document.getElementById('btn-today').addEventListener('click',()=>{baseMonth=new Date();renderAllMonths();});
   document.getElementById('btn-refresh').addEventListener('click',()=>{
-    const btn=document.getElementById('btn-refresh');
-    btn.style.animation='spin 0.5s';
-    setTimeout(()=>{btn.style.animation='';},500);
-    if(firebaseDb){
-      const c=loadSyncConfig();
-      if(c?.userId){
-        // まずローカルの変更をFirestoreに送信
-        syncToFirebase(getNow());
-        // 少し待ってからFirestoreの最新データを取得
-        setTimeout(()=>{
-          firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
-            if(doc.exists){
-              const rd=doc.data();
-              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-              events=rd.events||{};
-              deduplicateEvents();
-              lastSyncedJSON=JSON.stringify(events);
-              localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-              updateDocSizeDisplay(); updatePhotoCount();
-            }
-          }).catch(()=>{});
-        },1000);
-      }
-    } else {
-      loadEvents(); renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-    }
+    window.location.reload();
   });
 
   // ===== 詳細パネル =====
@@ -1729,28 +1703,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   renderAllMonths();
   initFirebase();
 
-  // ページがフォーカスを取り戻した時に自動で最新データを取得
+  // ページがフォーカスを取り戻した時にFirestoreに再接続
   document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible'&&firebaseDb){
-      const c=loadSyncConfig();
-      if(c?.userId){
-        // まずローカルの変更をFirestoreに送信
-        syncToFirebase(getNow());
-        // 少し待ってから最新データを取得
-        setTimeout(()=>{
-          firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
-            if(doc.exists){
-              const rd=doc.data();
-              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-              events=rd.events||{};
-              deduplicateEvents();
-              lastSyncedJSON=JSON.stringify(events);
-              localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-            }
-          }).catch(()=>{});
-        },1000);
-      }
+    if(document.visibilityState==='visible'){
+      // ローカル変更をFirestoreに送信（未同期分があれば）
+      if(firebaseDb) syncToFirebase(getNow());
     }
   });
 
