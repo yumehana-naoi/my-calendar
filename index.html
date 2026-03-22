@@ -858,14 +858,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     else if(kb>=700) el.style.color='#F59E0B';
     else el.style.color='#6B7280';
   }
-  function getLocalStorageUsageMB() {
-    let total=0;
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      total+=key.length+localStorage.getItem(key).length;
-    }
-    return total*2/1024/1024;
-  }
   function updatePhotoCount() {
     const el=document.getElementById('photo-count');
     const btn=document.getElementById('btn-select-photo');
@@ -984,32 +976,28 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             }
             if(!initialLoadDone){
               initialLoadDone=true;
-              const remoteEvents=rd.events||{};
-              remoteEvents.__deletedIds=rd.deletedIds||{};
-              // 常にマージ: リモートとローカル両方の予定を残す（削除済みは除外）
-              mergeEvents(remoteEvents);
+              // リモートの削除済みIDを取り込み
+              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+              // リモートデータを採用（最新のFirestoreが正）
+              events=rd.events||{};
+              deduplicateEvents();
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-              localStorage.setItem(LAST_MODIFIED_KEY,getNow());
+              localStorage.setItem(LAST_MODIFIED_KEY,rUpd||getNow());
+              lastSyncedJSON=JSON.stringify(events);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-              syncToFirebase(getNow());
             } else {
               if(isSyncingToFirebase) return;
               const remoteJSON=JSON.stringify(rd.events||{});
               if(remoteJSON===lastSyncedJSON) return;
+              // リモートの削除済みIDを取り込み
+              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
               isSyncingFromFirebase=true;
-              const remoteEvts=rd.events||{};
-              remoteEvts.__deletedIds=rd.deletedIds||{};
-              // リモートのデータをベースに、ローカルのみの予定もマージ（削除済みは除外）
-              const localBackup={...events};
-              events=remoteEvts;
-              delete events.__deletedIds;
-              mergeEvents(localBackup);
+              events=rd.events||{};
+              deduplicateEvents();
               lastSyncedJSON=JSON.stringify(events);
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               isSyncingFromFirebase=false;
-              // ローカルに追加分があればFirebaseにも反映
-              if(JSON.stringify(events)!==remoteJSON) syncToFirebase(getNow());
             }
           } else { initialLoadDone=true; syncToFirebase(getNow()); }
         });
@@ -1029,24 +1017,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       });
       if(events[dk].length===0) delete events[dk];
     }
-  }
-  function mergeEvents(re) {
-    // 両方の削除済みIDを統合
-    const allDeleted={...deletedIds,...(re.__deletedIds||{})};
-    deletedIds=allDeleted;
-    delete re.__deletedIds;
-    for(const dk of Object.keys(re)){
-      if(!events[dk]){events[dk]=re[dk].filter(e=>!allDeleted[e.id]);}
-      else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id)&&!allDeleted[r.id])events[dk].push(r);}}
-    }
-    // ローカル側も削除済みを除去
-    for(const dk of Object.keys(events)){
-      if(!events[dk])continue;
-      events[dk]=events[dk].filter(e=>!allDeleted[e.id]);
-      if(events[dk].length===0) delete events[dk];
-    }
-    // 重複除去
-    deduplicateEvents();
   }
   function cleanupDeletedIds() {
     const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
@@ -1196,9 +1166,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
           if(doc.exists){
             const rd=doc.data();
-            const remoteEvts=rd.events||{};
-            remoteEvts.__deletedIds=rd.deletedIds||{};
-            mergeEvents(remoteEvts);
+            if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+            events=rd.events||{};
+            deduplicateEvents();
+            lastSyncedJSON=JSON.stringify(events);
             localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
             renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
             updateDocSizeDisplay(); updatePhotoCount();
@@ -1762,9 +1733,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
           if(doc.exists){
             const rd=doc.data();
-            const remoteEvts=rd.events||{};
-            remoteEvts.__deletedIds=rd.deletedIds||{};
-            mergeEvents(remoteEvts);
+            if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+            events=rd.events||{};
+            deduplicateEvents();
+            lastSyncedJSON=JSON.stringify(events);
             localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
             renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
           }
