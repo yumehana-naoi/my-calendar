@@ -325,10 +325,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* Photo styles */
 .photo-input-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.photo-preview-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
-.photo-preview-wrap { position: relative; display: inline-block; }
+.photos-preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.photo-preview-item { position: relative; display: inline-block; }
+.photo-preview-item img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 .photo-remove-btn { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: none; background: #DC2626; color: white; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.detail-event-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); margin-top: 8px; transition: opacity 0.15s; }
+.detail-photos-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.detail-event-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); transition: opacity 0.15s; }
 .detail-event-photo:hover { opacity: 0.8; }
 #photo-lightbox { background: rgba(0,0,0,0.9); z-index: 400; cursor: pointer; }
 .lightbox-img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 4px; }
@@ -406,16 +408,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       </div>
 
       <div class="form-group" id="photo-group">
-        <label>写真（任意・1枚）</label>
+        <label>写真（任意・最大10枚）</label>
         <div class="photo-input-wrap">
-          <input type="file" id="event-photo" accept="image/*" style="display:none">
-          <button type="button" id="btn-select-photo" class="secondary-btn" style="font-size:0.85rem">📷 写真を選択</button>
+          <input type="file" id="event-photo" accept="image/*" multiple style="display:none">
+          <button type="button" id="btn-select-photo" class="secondary-btn" style="font-size:0.85rem">📷 写真を追加</button>
           <span id="photo-count" style="font-size:0.8rem;color:#6B7280"></span>
-          <div id="photo-preview-wrap" class="photo-preview-wrap" style="display:none">
-            <img id="photo-preview-img" class="photo-preview-img">
-            <button type="button" id="btn-remove-photo" class="photo-remove-btn">✕</button>
-          </div>
         </div>
+        <div id="photos-preview-grid" class="photos-preview-grid"></div>
       </div>
 
       <div class="form-group" id="recurrence-group">
@@ -706,7 +705,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let baseMonth = new Date();
   let customDates = [];
   let miniCalMonth = new Date();
-  let photoData = null;
+  let photosData = []; // 写真URL/dataURLの配列（最大10枚）
+  const MAX_PHOTOS = 10;
   let firebaseDb = null;
   let firebaseStorage = null;
   let firebaseUnsubscribe = null;
@@ -772,7 +772,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         // 3ヶ月以上前の予定削除時、写真もStorageから確実に削除
         if(events[keys[i]]){
           for(let j=0;j<events[keys[i]].length;j++){
-            if(events[keys[i]][j].photo) deletePhoto(events[keys[i]][j].photo);
+            const ep=events[keys[i]][j].photos||(events[keys[i]][j].photo?[events[keys[i]][j].photo]:[]);
+            for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);
           }
         }
         delete events[keys[i]]; changed=true;
@@ -845,36 +846,52 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function updatePhotoCount() {
     const el=document.getElementById('photo-count');
     const btn=document.getElementById('btn-select-photo');
+    let countText=photosData.length>0?photosData.length+'/'+MAX_PHOTOS+'枚':'';
     if(firebaseStorage){
-      // Firebase Storage容量を表示
       const usedMB=photoUsageBytes/1024/1024;
       const limitGB=STORAGE_LIMIT_GB;
-      if(usedMB>=1024) el.textContent='写真容量 '+(usedMB/1024).toFixed(2)+'GB/'+limitGB+'GB';
-      else el.textContent='写真容量 '+usedMB.toFixed(1)+'MB/'+limitGB+'GB';
+      const capText=usedMB>=1024?(usedMB/1024).toFixed(2)+'GB/'+limitGB+'GB':usedMB.toFixed(1)+'MB/'+limitGB+'GB';
+      el.textContent=(countText?countText+' | ':'')+'写真容量 '+capText;
       if(usedMB>=limitGB*1024*0.8) el.style.color='#DC2626';
       else el.style.color='#6B7280';
-      btn.disabled=false; btn.title='';
     } else {
-      // Firebase Storage未接続時
-      el.textContent='写真: Storage未接続';
+      el.textContent=(countText?countText+' | ':'')+'写真: Storage未接続';
       el.style.color='#F59E0B';
-      btn.disabled=false; btn.title='Storage Bucket設定で写真保存が可能になります';
     }
+    // 10枚に達したらボタン非表示
+    btn.style.display=photosData.length>=MAX_PHOTOS?'none':'';
   }
-  function resetPhotoPreview(){
-    document.getElementById('photo-preview-wrap').style.display='none';
-    document.getElementById('btn-select-photo').style.display='';
+  function renderPhotoPreviews(){
+    const grid=document.getElementById('photos-preview-grid');
+    grid.innerHTML='';
+    for(let i=0;i<photosData.length;i++){
+      const wrap=document.createElement('div');
+      wrap.className='photo-preview-item';
+      const img=document.createElement('img');
+      img.src=photosData[i];
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='photo-remove-btn'; btn.textContent='✕';
+      btn.setAttribute('data-photo-index',i);
+      btn.addEventListener('click',function(){ photosData.splice(+this.getAttribute('data-photo-index'),1); renderPhotoPreviews(); updatePhotoCount(); });
+      wrap.appendChild(img); wrap.appendChild(btn);
+      grid.appendChild(wrap);
+    }
     document.getElementById('event-photo').value='';
-  }
-  function showPhotoPreview(src){
-    if(!src){resetPhotoPreview();return;}
-    document.getElementById('photo-preview-img').src=src;
-    document.getElementById('photo-preview-wrap').style.display='';
-    document.getElementById('btn-select-photo').style.display='none';
   }
 
   // ===== ストレージ =====
-  function loadEvents() { try{const d=localStorage.getItem(STORAGE_KEY); events=d?JSON.parse(d):{};}catch{events={};} }
+  function migratePhotoToPhotos(){
+    const keys=Object.keys(events);
+    for(let i=0;i<keys.length;i++){
+      if(!events[keys[i]]) continue;
+      for(let j=0;j<events[keys[i]].length;j++){
+        const ev=events[keys[i]][j];
+        if(ev.photo&&!ev.photos){ev.photos=[ev.photo];delete ev.photo;}
+        if(!ev.photos) ev.photos=[];
+      }
+    }
+  }
+  function loadEvents() { try{const d=localStorage.getItem(STORAGE_KEY); events=d?JSON.parse(d):{};}catch{events={};} migratePhotoToPhotos(); }
   function saveEvents() {
     const now=getNow();
     localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
@@ -965,22 +982,19 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
               const pending=localStorage.getItem('pendingSync');
               if(pending){
-                // 未同期のローカル変更がある → ローカルを優先してFirestoreに上書き
-                syncToFirebase(getNow());
-              } else {
-                // 未同期の変更なし → リモートデータを採用（従来通り）
-                const localEvents=JSON.parse(JSON.stringify(events));
-                events=rd.events||{};
-                // ローカルにしかない新規予定を保護
-                for(const dk of Object.keys(localEvents)){
-                  if(!localEvents[dk]) continue;
-                  for(const le of localEvents[dk]){
-                    if(deletedIds[le.id]) continue;
-                    if(!events[dk]) events[dk]=[];
-                    const exists=events[dk].some(re=>re.id===le.id||(re.groupId&&le.groupId&&re.groupId===le.groupId&&re.time===le.time&&re.title===le.title));
-                    if(!exists) events[dk].push(le);
-                  }
+                // 未同期のローカル変更がある → タイムスタンプ比較
+                const localTime=localStorage.getItem(LAST_MODIFIED_KEY)||'';
+                if(localTime && rUpd && localTime > rUpd){
+                  // ローカルの方が新しい → ローカルを優先してFirestoreに上書き
+                  syncToFirebase(getNow());
+                } else {
+                  // Firestoreの方が新しい → Firestoreを採用（古いpendingSyncを破棄）
+                  localStorage.removeItem('pendingSync');
+                  events=rd.events||{};
                 }
+              } else {
+                // 未同期の変更なし → Firestoreデータを100%採用
+                events=rd.events||{};
               }
               deduplicateEvents();
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
@@ -1210,7 +1224,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
       html+=`<div class="detail-event-title">${escapeHtml(ev.title||'（無題）')}</div>`;
       if(ev.detail){html+=`<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;}
-      if(ev.photo){html+=`<img class="detail-event-photo" src="${ev.photo}" data-action="show-photo">`;}
+      const evPhotos=ev.photos||(ev.photo?[ev.photo]:[]);
+      if(evPhotos.length>0){html+='<div class="detail-photos-wrap">';for(let pi=0;pi<evPhotos.length;pi++){html+=`<img class="detail-event-photo" src="${evPhotos[pi]}" data-action="show-photo">`;}html+='</div>';}
       // ボタン
       const doneLabel=ev.done?'↩ 戻す':'✅ 済';
       const doneClass=ev.done?'undone-btn':'done-btn';
@@ -1297,7 +1312,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('edit-date-group').style.display='none';
     customDates=[]; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
-    photoData=null; resetPhotoPreview(); updatePhotoCount();
+    photosData=[]; renderPhotoPreviews(); updatePhotoCount();
     document.getElementById('recurrence-group').style.display='';
     document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
@@ -1313,7 +1328,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    photoData=ev.photo||null; showPhotoPreview(photoData); updatePhotoCount();
+    photosData=ev.photos?ev.photos.slice():ev.photo?[ev.photo]:[]; renderPhotoPreviews(); updatePhotoCount();
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1332,12 +1347,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== 写真イベントリスナー =====
   document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
   document.getElementById('event-photo').addEventListener('change',async(e)=>{
-    const file=e.target.files[0]; if(!file)return;
-    // Firebase Storage未接続でも写真選択は許可（アップロード時にエラー表示）
-    try{photoData=await compressImage(file);showPhotoPreview(photoData);}
-    catch(err){alert(err.message);e.target.value='';}
+    const files=Array.from(e.target.files); if(!files.length)return;
+    const remaining=MAX_PHOTOS-photosData.length;
+    if(remaining<=0){alert('写真は最大'+MAX_PHOTOS+'枚までです。');e.target.value='';return;}
+    const toProcess=files.slice(0,remaining);
+    if(files.length>remaining) alert('上限のため'+toProcess.length+'枚のみ追加します。');
+    for(let i=0;i<toProcess.length;i++){
+      try{const compressed=await compressImage(toProcess[i]);photosData.push(compressed);}
+      catch(err){alert(toProcess[i].name+': '+err.message);}
+    }
+    renderPhotoPreviews(); updatePhotoCount();
   });
-  document.getElementById('btn-remove-photo').addEventListener('click',()=>{photoData=null;resetPhotoPreview();updatePhotoCount();});
 
   // 詳細パネル内の写真クリック→拡大
   document.getElementById('detail-events-list').addEventListener('click',(e)=>{
@@ -1427,25 +1447,27 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const colorIndex=getSelectedColor();
     const recurrenceType=document.getElementById('recurrence-type').value;
 
-    // 写真アップロード（Firebase Storage対応）
-    let photo=undefined;
-    if(photoData){
-      if(photoData.startsWith('data:')){
-        photo=await uploadPhoto(photoData);
-        if(photo===null){ photo=undefined; } // アップロード失敗時は写真なしで保存
+    // 写真アップロード（Firebase Storage対応・複数枚）
+    const photos=[];
+    for(let pi=0;pi<photosData.length;pi++){
+      if(photosData[pi].startsWith('data:')){
+        const url=await uploadPhoto(photosData[pi]);
+        if(url) photos.push(url); // アップロード失敗時はスキップ
       } else {
-        photo=photoData; // 既にURL
+        photos.push(photosData[pi]); // 既にURL
       }
     }
-    // 編集時に既存写真が削除された場合、Storageからも削除
-    if(editingEvent&&editingEvent.photo&&!photoData){
-      deletePhoto(editingEvent.photo);
+    // 編集時に削除された写真をStorageからも削除
+    if(editingEvent){
+      const oldPhotos=editingEvent.photos||[];
+      for(let oi=0;oi<oldPhotos.length;oi++){
+        if(photos.indexOf(oldPhotos[oi])===-1) deletePhoto(oldPhotos[oi]);
+      }
     }
 
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex};
-      if(photo) updates.photo=photo; else updates.photo=null;
+      const updates={time,title,detail,colorIndex,photos:photos};
 
       if(editingEvent.groupId){
         showEditGroupConfirm(updates, newDate, restoreBtn);
@@ -1465,12 +1487,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     if(recurrenceType==='none'){
-      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});
+      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos});
     } else {
       const result=generateRecurringDates(recurrenceType,selectedDate);
       const dates=result.dates; const recurrenceInfo=result.info;
-      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});}
-      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photo});}}
+      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos});}
+      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos});}}
     }
     try{saveEvents();}catch(e){console.warn('localStorage保存エラー:',e);}
     restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
@@ -1592,7 +1614,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     onSingleClick = null;
     onOkClick = function(){
       const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
-      if(ev&&ev.photo) deletePhoto(ev.photo);
+      if(ev){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
       deleteEvent(selectedDate, eventId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1608,13 +1630,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.style.background = '#DC2626';
     onSingleClick = function(){
       const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
-      if(ev&&ev.photo) deletePhoto(ev.photo);
+      if(ev){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
       deleteEvent(selectedDate, eventId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     onOkClick = function(){
       const keys=Object.keys(events);
-      for(let i=0;i<keys.length;i++){if(events[keys[i]]){for(let j=0;j<events[keys[i]].length;j++){const ev=events[keys[i]][j];if(ev.groupId===groupId&&ev.photo) deletePhoto(ev.photo);}}}
+      for(let i=0;i<keys.length;i++){if(events[keys[i]]){for(let j=0;j<events[keys[i]].length;j++){const ev=events[keys[i]][j];if(ev.groupId===groupId){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}}}}
       deleteEventsByGroupId(groupId); saveEvents();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1650,7 +1672,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           if(events[keys[i]]){
             for(let j=0;j<events[keys[i]].length;j++){
               if(events[keys[i]][j].groupId===gid){
-                if(events[keys[i]][j].photo&&events[keys[i]][j].photo!==updates.photo) deletePhoto(events[keys[i]][j].photo);
+                const oldP=events[keys[i]][j].photos||(events[keys[i]][j].photo?[events[keys[i]][j].photo]:[]);
+                const newP=updates.photos||[];
+                for(let pi=0;pi<oldP.length;pi++){if(newP.indexOf(oldP[pi])===-1) deletePhoto(oldP[pi]);}
                 Object.assign(events[keys[i]][j],updates);
               }
             }
@@ -1837,10 +1861,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // Copy all calendar data from one site prefix to another (keeps originals intact)
+  // sync_configはコピーしない（異なる拠点のFirestoreデータと混ざるのを防止）
   function copySiteData(oldSiteName, newSiteName) {
     var oldPrefix = getSitePrefix(oldSiteName);
     var newPrefix = getSitePrefix(newSiteName);
-    var suffixes = ['calendar_events', 'calendar_sync_config', 'calendar_last_modified', 'calendar_last_cleanup'];
+    var suffixes = ['calendar_events', 'calendar_last_modified', 'calendar_last_cleanup'];
     for (var i = 0; i < suffixes.length; i++) {
       var oldKey = oldPrefix + suffixes[i];
       var newKey = newPrefix + suffixes[i];
@@ -1886,17 +1911,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         // Check if the new name has existing old data in localStorage
         var newPrefix = getSitePrefix(newName);
         var existingData = localStorage.getItem(newPrefix + 'calendar_events');
-        if (existingData && existingData !== '{}') {
+        var existingSyncConfig = localStorage.getItem(newPrefix + 'calendar_sync_config');
+        if (existingSyncConfig) {
+          // 変更先の拠点に同期設定がある → 他デバイスとデータ共有中の可能性
+          var proceed = confirm('「' + newName + '」には同期設定があります。\n他のデバイスとデータを共有中の可能性があります。\n\n名前変更すると、リロード後にFirestoreのデータが読み込まれます。\n続行しますか？');
+          if (!proceed) return;
+          // 同期設定がある場合、ローカルのイベントデータはコピーしない
+          // （Firestoreから正しいデータを取得するため）
+        } else if (existingData && existingData !== '{}') {
           var useOld = confirm('「' + newName + '」の以前のデータが見つかりました。\n\n[OK] → 以前のデータを復元する\n[キャンセル] → 現在のデータで上書きする');
           if (!useOld) {
-            // Overwrite: copy current data to new prefix
             copySiteData(oldName, newName);
           }
-          // If useOld: do nothing, existing data at newPrefix is used as-is
         } else {
           // No existing data: copy current data to new prefix
           copySiteData(oldName, newName);
         }
+        // pendingSyncをクリア（旧データでFirestoreを上書きしないように）
+        localStorage.removeItem('pendingSync');
         // Schedule old data for cleanup after 30 days
         utils.recordRenamedSite(oldName);
         // Update site list
