@@ -529,7 +529,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <div class="form-group"><label>API Key</label><input type="text" id="fb-apiKey" placeholder="AIza..."></div>
       <div class="form-group"><label>Auth Domain</label><input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com"></div>
       <div class="form-group"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="your-project-id"></div>
-      <div class="form-group"><label>Storage Bucket</label><input type="text" id="fb-storageBucket" placeholder="your-project-id.appspot.com"></div>
+      <div class="form-group"><label>Storage Bucket（写真保存用）</label><input type="text" id="fb-storageBucket" placeholder="your-project-id.firebasestorage.app"></div>
       <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
       <div class="form-actions">
         <button id="btn-save-sync" class="primary-btn">保存して接続</button>
@@ -778,10 +778,21 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(changed) saveEvents();
   }
 
-  // ===== 古い写真の自動削除 =====
-  function cleanupOldPhotos() {
-    // 写真の自動削除は行わない（3ヶ月後の予定削除時にcleanupOldEventsで一括削除）
-    // 済マーク時も写真は残す
+  // ===== base64写真データの自動削除（容量節約） =====
+  function cleanupBase64Photos() {
+    // eventsの中にbase64写真が残っていたら削除（Firebase Storageに移行済みのため不要）
+    let changed=false;
+    const keys=Object.keys(events);
+    for(let i=0;i<keys.length;i++){
+      if(!events[keys[i]]) continue;
+      for(let j=0;j<events[keys[i]].length;j++){
+        if(events[keys[i]][j].photo && events[keys[i]][j].photo.startsWith('data:')){
+          delete events[keys[i]][j].photo;
+          changed=true;
+        }
+      }
+    }
+    if(changed){ saveEvents(); console.log('base64写真データを削除しました（容量節約）'); }
   }
 
   // ===== 画像圧縮 =====
@@ -791,14 +802,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       reader.onload=function(e){
         const img=new Image();
         img.onload=function(){
-          const maxW=1200; let w=img.width,h=img.height;
+          // 転送量節約: 最大800px、品質0.6で圧縮
+          const maxW=800; let w=img.width,h=img.height;
           if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
           const canvas=document.createElement('canvas');
           canvas.width=w; canvas.height=h;
           const ctx=canvas.getContext('2d');
           ctx.drawImage(img,0,0,w,h);
-          let result=canvas.toDataURL('image/jpeg',0.7);
-          if(result.length>200*1024){result=canvas.toDataURL('image/jpeg',0.5);}
+          let result=canvas.toDataURL('image/jpeg',0.6);
+          // 100KB超えたらさらに圧縮
+          if(result.length>100*1024){result=canvas.toDataURL('image/jpeg',0.4);}
           resolve(result);
         };
         img.onerror=function(){reject(new Error('画像の読み込みに失敗しました'));};
@@ -856,22 +869,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(firebaseStorage){
       // Firebase Storage容量を表示
       const usedMB=photoUsageBytes/1024/1024;
-      const limitMB=STORAGE_LIMIT_GB*1024;
-      el.textContent='写真容量 '+usedMB.toFixed(1)+'MB/'+STORAGE_LIMIT_GB+'GB';
-      if(usedMB>=limitMB*0.8) el.style.color='#DC2626';
+      const limitGB=STORAGE_LIMIT_GB;
+      if(usedMB>=1024) el.textContent='写真容量 '+(usedMB/1024).toFixed(2)+'GB/'+limitGB+'GB';
+      else el.textContent='写真容量 '+usedMB.toFixed(1)+'MB/'+limitGB+'GB';
+      if(usedMB>=limitGB*1024*0.8) el.style.color='#DC2626';
       else el.style.color='#6B7280';
       btn.disabled=false; btn.title='';
     } else {
-      // localStorage容量を表示（フォールバック）
-      const usedMB=getLocalStorageUsageMB();
-      el.textContent='容量 '+usedMB.toFixed(1)+'MB/5MB';
-      if(usedMB>=4) el.style.color='#DC2626';
-      else el.style.color='#6B7280';
-      if(usedMB>=4.5 && !photoData){
-        btn.disabled=true; btn.title='ストレージ容量が不足しています';
-      } else {
-        btn.disabled=false; btn.title='';
-      }
+      // Firebase Storage未接続時
+      el.textContent='写真: Storage未接続';
+      el.style.color='#F59E0B';
+      btn.disabled=false; btn.title='Storage Bucket設定で写真保存が可能になります';
     }
   }
   function resetPhotoPreview(){
@@ -923,10 +931,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
         await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js');
       }
-      const bucket=config.storageBucket||config.projectId+'.firebasestorage.app';
-      if(!firebase.apps.length) firebase.initializeApp({apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId,storageBucket:bucket});
+      const bucket=config.storageBucket||'';
+      const appConfig={apiKey:config.apiKey,authDomain:config.authDomain||'',projectId:config.projectId};
+      if(bucket) appConfig.storageBucket=bucket;
+      if(!firebase.apps.length) firebase.initializeApp(appConfig);
       firebaseDb=firebase.firestore();
-      firebaseStorage=firebase.storage();
+      if(bucket){
+        try{ firebaseStorage=firebase.storage(); }
+        catch(e){ console.warn('Firebase Storage init error:',e); firebaseStorage=null; }
+      } else {
+        firebaseStorage=null;
+        console.warn('storageBucketが未設定のため写真機能は無効です');
+      }
       if(firebaseUnsubscribe) firebaseUnsubscribe();
       initialLoadDone=false;
       firebaseUnsubscribe=firebaseDb.collection('calendars').doc(config.userId)
@@ -970,13 +986,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   async function uploadPhoto(dataUrl) {
-    if(!firebaseStorage) return dataUrl; // フォールバック: base64のまま
-    const c=loadSyncConfig(); if(!c?.userId) return dataUrl;
+    if(!firebaseStorage) {
+      alert('写真を保存するにはFirebase Storageの設定が必要です。\n同期設定でStorage Bucketを入力してください。');
+      return null; // 保存中止
+    }
+    const c=loadSyncConfig(); if(!c?.userId) return null;
     try {
       const blob=dataUrlToBlob(dataUrl);
       const photoId=generateId();
       const ref=firebaseStorage.ref('photos/'+c.userId+'/'+photoId+'.jpg');
-      await ref.put(blob);
+      // キャッシュ1年: ダウンロード転送量を節約
+      await ref.put(blob,{cacheControl:'public,max-age=31536000',contentType:'image/jpeg'});
       const url=await ref.getDownloadURL();
       // 容量カウント更新
       if(firebaseDb){
@@ -988,7 +1008,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       return url;
     } catch(err) {
       console.error('Photo upload error:',err);
-      return dataUrl; // フォールバック
+      if(err.code==='storage/unauthorized') alert('Firebase Storageのセキュリティルールを確認してください。\nStorage > Rules で読み書きを許可する設定が必要です。');
+      else alert('写真のアップロードに失敗しました: '+err.message);
+      return null; // 保存中止（base64をlocalStorageに保存しない）
     }
   }
 
@@ -1215,7 +1237,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
   document.getElementById('event-photo').addEventListener('change',async(e)=>{
     const file=e.target.files[0]; if(!file)return;
-    if(!firebaseStorage&&getLocalStorageUsageMB()>=4.5&&!editingEvent?.photo){alert('ストレージ容量が不足しています。\n不要な予定や写真を削除してから追加してください。');e.target.value='';return;}
+    // Firebase Storage未接続でも写真選択は許可（アップロード時にエラー表示）
     try{photoData=await compressImage(file);showPhotoPreview(photoData);}
     catch(err){alert(err.message);e.target.value='';}
   });
@@ -1307,6 +1329,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(photoData){
       if(photoData.startsWith('data:')){
         photo=await uploadPhoto(photoData);
+        if(photo===null){ photo=undefined; } // アップロード失敗時は写真なしで保存
       } else {
         photo=photoData; // 既にURL
       }
@@ -1511,7 +1534,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== 初期化 =====
   loadEvents();
   cleanupOldEvents();
-  cleanupOldPhotos();
+  cleanupBase64Photos();
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
