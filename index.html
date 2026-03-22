@@ -1175,7 +1175,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   function hideConfirm() { confirmDialog.classList.add('hidden'); }
 
-  cbCancel.addEventListener('click', function(){ hideConfirm(); });
+  cbCancel.addEventListener('click', function(){ hideConfirm(); const sb=document.querySelector('#event-form button[type="submit"]'); if(sb){sb.disabled=false;sb.textContent='保存';} });
 
   // 現在のダイアログ用コールバック
   let onOkClick = null;
@@ -1338,6 +1338,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== フォーム送信 =====
   document.getElementById('event-form').addEventListener('submit',async(e)=>{
     e.preventDefault();
+    const submitBtn=document.querySelector('#event-form button[type="submit"]');
+    submitBtn.disabled=true; submitBtn.textContent='保存中...';
+    const restoreBtn=()=>{submitBtn.disabled=false;submitBtn.textContent='保存';};
     const time=document.getElementById('event-time').value||'';
     const title=document.getElementById('event-title').value.trim();
     const detail=document.getElementById('event-detail').value.trim();
@@ -1364,7 +1367,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       const updates={time,title,detail,colorIndex,photo:photo||undefined};
 
       if(editingEvent.groupId){
-        showEditGroupConfirm(updates, newDate);
+        showEditGroupConfirm(updates, newDate, restoreBtn);
         return;
       }
       // 単発予定: 日付変更
@@ -1374,7 +1377,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       } else {
         updateEvent(selectedDate,editingEvent.id,updates);
       }
-      saveEvents(); closeModal();
+      saveEvents(); restoreBtn(); closeModal();
       if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
       renderDetailPanel(selectedDate); renderAllMonths();
       return;
@@ -1388,8 +1391,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photo});}
       else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photo});}}
     }
-    try{saveEvents();}catch(e){alert('保存に失敗しました。');return;}
-    closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+    try{saveEvents();}catch(e){restoreBtn();alert('保存に失敗しました。');return;}
+    restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
   });
 
   // ===== 繰り返し終了日の変更（延長＋短縮） =====
@@ -1537,7 +1540,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     confirmDialog.classList.remove('hidden');
   }
 
-  function showEditGroupConfirm(updates, newDate) {
+  function showEditGroupConfirm(updates, newDate, restoreBtn) {
     document.getElementById('confirm-title').textContent = '繰り返し予定の編集';
     document.getElementById('confirm-message').textContent = '変更する範囲を選択してください。';
     cbSingle.style.display = '';
@@ -1551,11 +1554,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       } else {
         updateEvent(selectedDate,editingEvent.id,updates);
       }
-      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
-        const newEnd=document.getElementById('extend-end-date').value;
-        if(newEnd&&editingEvent.recurrenceInfo) changeRecurringEndDate(editingEvent,newEnd);
-      }
-      saveEvents(); closeModal();
+      saveEvents(); if(restoreBtn)restoreBtn(); closeModal();
       if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
       renderDetailPanel(selectedDate); renderAllMonths();
     };
@@ -1572,11 +1571,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           }
         }
       }
-      if(editingEvent.groupId&&document.getElementById('extend-end-group').style.display!=='none'){
-        const newEnd=document.getElementById('extend-end-date').value;
-        if(newEnd&&editingEvent.recurrenceInfo) changeRecurringEndDate(editingEvent,newEnd);
-      }
-      saveEvents(); closeModal();
+      saveEvents(); if(restoreBtn)restoreBtn(); closeModal();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     confirmDialog.classList.remove('hidden');
@@ -1611,7 +1606,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   cleanupOldEvents();
   cleanupBase64Photos();
   // 旧データ(プレフィックスなし calendar_events)の重複削除
+  // ※本部サイト(STORAGE_KEY==='calendar_events')では実行しない
   (function(){
+    if(STORAGE_KEY==='calendar_events') return; // 本部は対象外
     const oldData=localStorage.getItem('calendar_events');
     if(!oldData) return;
     const siteData=localStorage.getItem(STORAGE_KEY);
