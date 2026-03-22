@@ -1039,7 +1039,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
     updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB)');
     // undefinedを完全除去（Firestoreはundefined不可）
-    const payload=JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:ts||getNow()}));
+    const payload=JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:ts||getNow(),photoUsageBytes:photoUsageBytes}));
     isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
     try{
       firebaseDb.collection('calendars').doc(c.userId).set(payload).then(()=>{ isSyncingToFirebase=false; updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
