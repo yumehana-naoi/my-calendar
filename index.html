@@ -723,7 +723,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   function getDefaultEndDate() {
     const d = new Date();
-    d.setFullYear(d.getFullYear() + 10);
+    d.setFullYear(d.getFullYear() + 5);
     return dateToKey(d);
   }
 
@@ -973,7 +973,19 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     } catch(err){ console.error('Firebase init error:',err); updateSyncStatus('error','エラー: '+err.message); }
   }
   function mergeEvents(re) { for(const dk of Object.keys(re)){if(!events[dk]){events[dk]=re[dk];}else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id))events[dk].push(r);}}} }
-  function syncToFirebase(ts) { const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return; isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events); firebaseDb.collection('calendars').doc(c.userId).set({events:events,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; }).catch(err=>{ isSyncingToFirebase=false; console.error('Sync error:',err); }); }
+  function syncToFirebase(ts) {
+    const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return;
+    // Firestoreドキュメントサイズチェック（1MB制限）
+    const docKB=estimateDocSizeKB();
+    if(docKB>=950){
+      console.error('Firestoreドキュメントサイズが1MB制限に近いため同期をスキップしました('+Math.round(docKB)+'KB)');
+      updateSyncStatus('error','容量警告: '+Math.round(docKB)+'KB/1MB');
+      return;
+    }
+    if(docKB>=700) updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB/1MB)');
+    isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
+    firebaseDb.collection('calendars').doc(c.userId).set({events:events,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; updateDocSizeDisplay(); }).catch(err=>{ isSyncingToFirebase=false; console.error('Sync error:',err); });
+  }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
   function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
 
@@ -1224,6 +1236,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       let lastDate=''; const keys=Object.keys(events);
       for(let i=0;i<keys.length;i++){if(events[keys[i]].some(e=>e.groupId===ev.groupId)){if(keys[i]>lastDate)lastDate=keys[i];}}
       document.getElementById('extend-end-date').value=lastDate||getDefaultEndDate();
+      document.getElementById('extend-end-date').max=getDefaultEndDate();
     } else {
       document.getElementById('recurrence-group').style.display='';
       document.getElementById('extend-end-group').style.display='none';
@@ -1260,6 +1273,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('recurrence-end-date').value=def;
     document.getElementById('monthly-end-date').value=def;
     document.getElementById('nth-end-date').value=def;
+    document.getElementById('recurrence-end-date').max=def;
+    document.getElementById('monthly-end-date').max=def;
+    document.getElementById('nth-end-date').max=def;
+    document.getElementById('extend-end-date').max=def;
   }
   function resetColorPicker(idx) { document.querySelectorAll('.color-option').forEach(b=>b.classList.toggle('selected',parseInt(b.dataset.color)===idx)); }
   function getSelectedColor() { const s=document.querySelector('.color-option.selected'); return s?parseInt(s.dataset.color):0; }
@@ -1396,14 +1413,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       const selectedDays=[];document.querySelectorAll('.weekday-btn.active').forEach(b=>selectedDays.push(parseInt(b.dataset.day)));
       if(selectedDays.length===0)selectedDays.push(startDate.getDay());
       const endInput=document.getElementById('recurrence-end-date').value;
-      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+5);
       info={type:'weekly',interval,days:selectedDays};
       let cur=new Date(startDate);cur.setDate(cur.getDate()-cur.getDay());
       while(cur<=endDate){for(const dow of selectedDays){const t=new Date(cur);t.setDate(t.getDate()+dow);if(t>=startDate&&t<=endDate)dates.push(dateToKey(t));}cur.setDate(cur.getDate()+7*interval);}
     } else if(type==='monthly'){
       const dom=parseInt(document.getElementById('monthly-day').value);
       const endInput=document.getElementById('monthly-end-date').value;
-      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+5);
       info={type:'monthly',dayOfMonth:dom};
       let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
       while(cur<=endDate){const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();const ad=Math.min(dom,dim);const t=new Date(cur.getFullYear(),cur.getMonth(),ad);if(t>=startDate&&t<=endDate)dates.push(dateToKey(t));cur.setMonth(cur.getMonth()+1);}
@@ -1412,7 +1429,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       document.querySelectorAll('.nth-btn.active').forEach(b=>nths.push(parseInt(b.dataset.nth)));
       if(nths.length===0)return{dates:[startDateKey],info:{}};
       const endInput=document.getElementById('nth-end-date').value;
-      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+10);
+      const endDate=endInput?new Date(endInput+'T23:59:59'):new Date(startDate);if(!endInput)endDate.setFullYear(endDate.getFullYear()+5);
       info={type:'nth-weekday',dow,nths};
       let cur=new Date(startDate.getFullYear(),startDate.getMonth(),1);
       while(cur<=endDate){for(const nth of nths){const d=getNthWeekday(cur.getFullYear(),cur.getMonth(),dow,nth);if(d&&d>=startDate&&d<=endDate)dates.push(dateToKey(d));}cur.setMonth(cur.getMonth()+1);}
@@ -1535,8 +1552,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   loadEvents();
   cleanupOldEvents();
   cleanupBase64Photos();
-  // デバッグ: localStorage容量チェック
-  (function(){let t=0,lines=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),v=localStorage.getItem(k),s=((k.length+v.length)*2)/1024;t+=s;lines.push(Math.round(s)+'KB: '+k);}lines.sort((a,b)=>parseInt(b)-parseInt(a));console.log('=== localStorage容量 ===\n'+lines.join('\n')+'\n合計: '+Math.round(t)+'KB');})();
+  // 旧データ(プレフィックスなし calendar_events)の重複削除
+  (function(){
+    const oldData=localStorage.getItem('calendar_events');
+    if(!oldData) return;
+    const siteData=localStorage.getItem(STORAGE_KEY);
+    if(siteData && siteData===oldData){
+      localStorage.removeItem('calendar_events');
+      localStorage.removeItem('calendar_last_modified');
+      localStorage.removeItem('calendar_last_cleanup');
+      console.log('重複データ(calendar_events)を削除しました: '+Math.round(oldData.length*2/1024)+'KB節約');
+    } else if(siteData) {
+      // 異なるデータ: マージして旧データ削除
+      try{
+        const oldEvents=JSON.parse(oldData);
+        const curEvents=JSON.parse(siteData);
+        let merged=false;
+        for(const dk of Object.keys(oldEvents)){
+          if(!curEvents[dk]){curEvents[dk]=oldEvents[dk];merged=true;}
+          else{const ids=new Set(curEvents[dk].map(e=>e.id));for(const ev of oldEvents[dk]){if(!ids.has(ev.id)){curEvents[dk].push(ev);merged=true;}}}
+        }
+        if(merged){events=curEvents;saveEvents();}
+        localStorage.removeItem('calendar_events');
+        localStorage.removeItem('calendar_last_modified');
+        localStorage.removeItem('calendar_last_cleanup');
+        console.log('旧データをマージして削除しました');
+      }catch(e){console.warn('旧データマージ失敗:',e);}
+    }
+  })();
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
