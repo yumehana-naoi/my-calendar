@@ -1246,11 +1246,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   cbOk.addEventListener('click', function(){
     hideConfirm();
-    if(onOkClick) { onOkClick(); onOkClick=null; onSingleClick=null; }
+    try{ if(onOkClick) { onOkClick(); } }catch(e){ alert('エラー: '+e.message); const sb=document.querySelector('#event-form button[type="submit"]'); if(sb){sb.disabled=false;sb.textContent='保存';} closeModal(); }
+    onOkClick=null; onSingleClick=null;
   });
   cbSingle.addEventListener('click', function(){
     hideConfirm();
-    if(onSingleClick) { onSingleClick(); onOkClick=null; onSingleClick=null; }
+    try{ if(onSingleClick) { onSingleClick(); } }catch(e){ alert('エラー: '+e.message); const sb=document.querySelector('#event-form button[type="submit"]'); if(sb){sb.disabled=false;sb.textContent='保存';} closeModal(); }
+    onOkClick=null; onSingleClick=null;
   });
 
   // ===== 済み確認 =====
@@ -1611,30 +1613,36 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.textContent = 'すべて変更';
     cbOk.style.background = '#2563EB';
     onSingleClick = function(){
-      if(newDate&&newDate!==selectedDate){
-        moveEvent(selectedDate,newDate,editingEvent.id);
-        updateEvent(newDate,editingEvent.id,updates);
-      } else {
-        updateEvent(selectedDate,editingEvent.id,updates);
-      }
-      saveEvents(); if(restoreBtn)restoreBtn(); closeModal();
+      try{
+        if(newDate&&newDate!==selectedDate){
+          moveEvent(selectedDate,newDate,editingEvent.id);
+          updateEvent(newDate,editingEvent.id,updates);
+        } else {
+          updateEvent(selectedDate,editingEvent.id,updates);
+        }
+        saveEvents();
+      }catch(e){ console.error('editSingle error:',e); }
+      if(restoreBtn)restoreBtn(); closeModal();
       if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     onOkClick = function(){
-      const gid=editingEvent.groupId;
-      const keys=Object.keys(events);
-      for(let i=0;i<keys.length;i++){
-        if(events[keys[i]]){
-          for(let j=0;j<events[keys[i]].length;j++){
-            if(events[keys[i]][j].groupId===gid){
-              if(events[keys[i]][j].photo&&events[keys[i]][j].photo!==updates.photo) deletePhoto(events[keys[i]][j].photo);
-              Object.assign(events[keys[i]][j],updates);
+      try{
+        const gid=editingEvent.groupId;
+        const keys=Object.keys(events);
+        for(let i=0;i<keys.length;i++){
+          if(events[keys[i]]){
+            for(let j=0;j<events[keys[i]].length;j++){
+              if(events[keys[i]][j].groupId===gid){
+                if(events[keys[i]][j].photo&&events[keys[i]][j].photo!==updates.photo) deletePhoto(events[keys[i]][j].photo);
+                Object.assign(events[keys[i]][j],updates);
+              }
             }
           }
         }
-      }
-      saveEvents(); if(restoreBtn)restoreBtn(); closeModal();
+        saveEvents();
+      }catch(e){ console.error('editAll error:',e); }
+      if(restoreBtn)restoreBtn(); closeModal();
       renderDetailPanel(selectedDate); renderAllMonths();
     };
     confirmDialog.classList.remove('hidden');
@@ -1670,7 +1678,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   });
 
   // 背景クリック
-  confirmDialog.addEventListener('click',(e)=>{if(e.target===confirmDialog) hideConfirm();});
+  confirmDialog.addEventListener('click',(e)=>{if(e.target===confirmDialog){ hideConfirm(); const sb=document.querySelector('#event-form button[type="submit"]'); if(sb){sb.disabled=false;sb.textContent='保存';} }});
   document.getElementById('event-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
   document.getElementById('sync-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 
