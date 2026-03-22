@@ -41,16 +41,16 @@ body {
 #app-header {
   position: sticky; top: 0; z-index: 100;
   display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 16px; background: #FFFFFF;
+  padding: 8px 10px; background: #FFFFFF;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  gap: 6px; flex-wrap: nowrap;
 }
-#app-header h1 { font-size: 1.2rem; font-weight: 700; }
-.header-actions { display: flex; gap: 8px; }
+.header-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .header-btn {
-  padding: 6px 14px; border: 1px solid var(--border);
+  padding: 5px 8px; border: 1px solid var(--border);
   border-radius: var(--radius); background: white;
-  cursor: pointer; font-size: 0.85rem; transition: background 0.15s;
+  cursor: pointer; font-size: 0.82rem; transition: background 0.15s;
 }
 .header-btn:hover { background: var(--bg); }
 
@@ -62,7 +62,7 @@ body {
   border-left: 1px solid var(--border);
   box-shadow: -2px 0 10px rgba(0,0,0,0.05);
   display: flex; flex-direction: column;
-  position: sticky; top: 52px; height: calc(100vh - 52px);
+  position: sticky; top: 44px; height: calc(100vh - 44px);
 }
 #detail-panel.hidden { width: 0; min-width: 0; overflow: hidden; border-left: none; box-shadow: none; }
 
@@ -89,7 +89,7 @@ body {
 .weekday-header {
   display: grid; grid-template-columns: repeat(7, 1fr);
   text-align: center; font-size: 0.8rem; font-weight: 600;
-  padding: 8px 0 4px; position: sticky; top: 52px; background: var(--bg); z-index: 10;
+  padding: 8px 0 4px;
 }
 .weekday-header span { padding: 4px; }
 .weekday-header span:first-child { color: var(--sunday); }
@@ -281,12 +281,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* Site selector styles */
 .site-selector-wrap {
-  display: flex; align-items: center; gap: 6px; margin-left: 12px;
+  display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1;
 }
 .site-selector-wrap select {
-  padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--radius);
-  font-size: 0.85rem; background: white; cursor: pointer; font-family: inherit;
-  max-width: 160px;
+  padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.82rem; background: white; cursor: pointer; font-family: inherit;
+  max-width: 140px; min-width: 0;
 }
 .site-selector-wrap select:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
@@ -339,16 +339,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 <body>
 
 <header id="app-header">
-  <h1 id="app-title">📅 カレンダー</h1>
   <div class="site-selector-wrap">
     <select id="site-select"></select>
     <button id="btn-site-manage" class="header-btn" title="拠点管理">⚙</button>
   </div>
+  <span id="doc-size-display" style="font-size:0.65rem;color:#9CA3AF;white-space:nowrap"></span>
   <div class="header-actions">
-    <span id="doc-size-display" style="font-size:0.7rem;color:#6B7280;white-space:nowrap"></span>
     <button id="btn-refresh" class="header-btn" title="最新データに更新">🔄</button>
     <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
-    <button id="btn-today" class="header-btn" title="今日へ移動">今日</button>
   </div>
 </header>
 <div id="sync-bar" style="display:none;text-align:center;padding:4px 8px;font-size:0.8rem;font-weight:bold;transition:all 0.3s;"></div>
@@ -1171,7 +1169,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const cell=e.target.closest('.day-cell:not(.empty)');
     if(cell&&cell.dataset.date) openDetailPanel(cell.dataset.date);
   });
-  document.getElementById('btn-today').addEventListener('click',()=>{baseMonth=new Date();renderAllMonths();});
   document.getElementById('btn-refresh').addEventListener('click',()=>{
     const btn=document.getElementById('btn-refresh');
     btn.style.animation='spin 1s linear infinite';
@@ -1771,17 +1768,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   var btnAddSite = document.getElementById('btn-add-site');
   var newSiteInput = document.getElementById('new-site-name');
   var siteListEl = document.getElementById('site-list');
-  var appTitle = document.getElementById('app-title');
+  // appTitle removed - site name shown in selector only
 
-  // Update title to show site name when not on default
-  function updateTitle() {
-    var site = currentSite;
-    if (site && site !== DEFAULT_SITE) {
-      appTitle.textContent = '\u{1F4C5} ' + site + ' カレンダー';
-    } else {
-      appTitle.textContent = '\u{1F4C5} カレンダー';
-    }
-  }
+  // Update title (no-op, site name shown in selector)
+  function updateTitle() {}
 
   // Populate site selector dropdown
   function populateSiteSelect() {
