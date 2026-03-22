@@ -1016,6 +1016,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       updateSyncStatus('connected','接続中 ✓');
     } catch(err){ console.error('Firebase init error:',err); updateSyncStatus('error','エラー: '+err.message); }
   }
+  function deduplicateEvents() {
+    // 同じ日付で同じgroupId+time+titleの予定を重複除去
+    for(const dk of Object.keys(events)){
+      if(!events[dk]||events[dk].length<=1) continue;
+      const seen=new Set();
+      events[dk]=events[dk].filter(e=>{
+        const key=e.groupId?(e.groupId+'|'+e.time+'|'+e.title):(e.id);
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if(events[dk].length===0) delete events[dk];
+    }
+  }
   function mergeEvents(re) {
     // 両方の削除済みIDを統合
     const allDeleted={...deletedIds,...(re.__deletedIds||{})};
@@ -1031,6 +1045,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       events[dk]=events[dk].filter(e=>!allDeleted[e.id]);
       if(events[dk].length===0) delete events[dk];
     }
+    // 重複除去
+    deduplicateEvents();
   }
   function cleanupDeletedIds() {
     const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
@@ -1732,6 +1748,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
   })();
   autoExtendRecurringEvents();
+  deduplicateEvents();
+  saveEvents();
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
