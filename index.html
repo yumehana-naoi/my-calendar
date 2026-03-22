@@ -1736,28 +1736,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   initFirebase();
 
 
-  // バックグラウンド復帰時にFirestoreから最新データを取得（送信はしない）
+  // バックグラウンド復帰時にページをリロード（コード・データ両方最新化）
+  let lastHiddenTime=0;
   document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible'&&firebaseDb){
-      const c=loadSyncConfig();
-      if(!c||!c.userId) return;
-      firebaseDb.collection('calendars').doc(c.userId).get().then((doc)=>{
-        if(doc.exists){
-          const rd=doc.data();
-          const remoteJSON=JSON.stringify(rd.events||{});
-          if(remoteJSON===lastSyncedJSON) return;
-          if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-          isSyncingFromFirebase=true;
-          events=rd.events||{};
-          deduplicateEvents();
-          lastSyncedJSON=JSON.stringify(events);
-          localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-          localStorage.setItem(LAST_MODIFIED_KEY,rd.updatedAt||getNow());
-          showSyncBar('✓ 最新データを取得','#059669',true);
-          renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-          isSyncingFromFirebase=false;
-        }
-      }).catch(()=>{});
+    if(document.visibilityState==='hidden'){ lastHiddenTime=Date.now(); }
+    if(document.visibilityState==='visible'&&lastHiddenTime>0){
+      const elapsed=Date.now()-lastHiddenTime;
+      if(elapsed>30000){ window.location.reload(); }
     }
   });
 
