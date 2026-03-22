@@ -1311,7 +1311,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-modal').classList.remove('hidden');
   }
 
-  function closeModal() { document.getElementById('event-modal').classList.add('hidden'); editingEvent=null; }
+  function closeModal() { document.getElementById('event-modal').classList.add('hidden'); editingEvent=null; renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate); }
 
   // ===== 写真イベントリスナー =====
   document.getElementById('btn-select-photo').addEventListener('click',()=>{document.getElementById('event-photo').click();});
@@ -1449,9 +1449,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       } else {
         updateEvent(selectedDate,editingEvent.id,updates);
       }
-      saveEvents(); restoreBtn(); closeModal();
+      saveEvents(); restoreBtn();
       if(newDate&&newDate!==selectedDate){selectedDate=newDate;}
-      renderDetailPanel(selectedDate); renderAllMonths();
+      closeModal();
       return;
     }
 
@@ -1464,7 +1464,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos});}}
     }
     try{saveEvents();}catch(e){console.warn('localStorage保存エラー:',e);}
-    restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+    restoreBtn(); closeModal();
   });
 
   // ===== 繰り返し終了日の変更（延長＋短縮） =====
