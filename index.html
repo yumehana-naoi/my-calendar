@@ -1056,8 +1056,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       return;
     }
     updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB)');
+    // undefinedをnullに変換（Firestoreはundefined不可）
+    const cleanEvents=JSON.parse(JSON.stringify(events));
     isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
-    firebaseDb.collection('calendars').doc(c.userId).set({events:events,deletedIds:deletedIds,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; localStorage.removeItem('pendingSync'); updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
+    firebaseDb.collection('calendars').doc(c.userId).set({events:cleanEvents,deletedIds:deletedIds,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; localStorage.removeItem('pendingSync'); updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
   }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
   function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
@@ -1190,7 +1192,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(localStorage.getItem('pendingSync')&&firebaseDb){
       const c=loadSyncConfig();
       if(c?.userId){
-        firebaseDb.collection('calendars').doc(c.userId).set({events:events,deletedIds:deletedIds,updatedAt:getNow()}).then(()=>{
+        firebaseDb.collection('calendars').doc(c.userId).set({events:JSON.parse(JSON.stringify(events)),deletedIds:deletedIds,updatedAt:getNow()}).then(()=>{
           localStorage.removeItem('pendingSync');
           window.location.reload();
         }).catch(()=>{ window.location.reload(); });
@@ -1458,7 +1460,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex,photo:photo||undefined};
+      const updates={time,title,detail,colorIndex};
+      if(photo) updates.photo=photo; else updates.photo=null;
 
       if(editingEvent.groupId){
         showEditGroupConfirm(updates, newDate, restoreBtn);
