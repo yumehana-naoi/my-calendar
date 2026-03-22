@@ -1535,6 +1535,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   loadEvents();
   cleanupOldEvents();
   cleanupBase64Photos();
+  // デバッグ: localStorage容量チェック
+  (function(){let t=0,lines=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),v=localStorage.getItem(k),s=((k.length+v.length)*2)/1024;t+=s;lines.push(Math.round(s)+'KB: '+k);}lines.sort((a,b)=>parseInt(b)-parseInt(a));console.log('=== localStorage容量 ===\n'+lines.join('\n')+'\n合計: '+Math.round(t)+'KB');})();
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
