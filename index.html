@@ -782,23 +782,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(changed) saveEvents();
   }
 
-  // ===== base64写真データの自動削除（容量節約） =====
-  function cleanupBase64Photos() {
-    // eventsの中にbase64写真が残っていたら削除（Firebase Storageに移行済みのため不要）
-    let changed=false;
-    const keys=Object.keys(events);
-    for(let i=0;i<keys.length;i++){
-      if(!events[keys[i]]) continue;
-      for(let j=0;j<events[keys[i]].length;j++){
-        if(events[keys[i]][j].photo && events[keys[i]][j].photo.startsWith('data:')){
-          delete events[keys[i]][j].photo;
-          changed=true;
-        }
-      }
-    }
-    if(changed){ saveEvents(); console.log('base64写真データを削除しました（容量節約）'); }
-  }
-
   // ===== 画像圧縮 =====
   function compressImage(file) {
     return new Promise((resolve,reject)=>{
@@ -1072,7 +1055,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(syncBarTimer) clearTimeout(syncBarTimer);
     if(autoHide) syncBarTimer=setTimeout(()=>{ bar.style.display='none'; },2000);
   }
-  function hideSyncBar(){ document.getElementById('sync-bar').style.display='none'; }
 
   // ===== Firebase Storage 写真管理 =====
   function dataUrlToBlob(dataUrl) {
@@ -1719,7 +1701,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // ===== 初期化 =====
   loadEvents();
   cleanupOldEvents();
-  cleanupBase64Photos();
   // 旧データ(プレフィックスなし calendar_events)の重複削除
   // ※本部サイト(STORAGE_KEY==='calendar_events')では実行しない
   (function(){
