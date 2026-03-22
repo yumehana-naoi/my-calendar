@@ -1741,13 +1741,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   renderAllMonths();
   initFirebase();
 
-  // ページがフォーカスを取り戻した時にFirestoreに再接続
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible'){
-      // ローカル変更をFirestoreに送信（未同期分があれば）
-      if(firebaseDb) syncToFirebase(getNow());
-    }
-  });
 
   // iPadのbfcache復帰時にボタン状態をリセット
   window.addEventListener('pageshow',function(e){
