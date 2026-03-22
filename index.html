@@ -273,6 +273,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .month-block { animation: fadeIn 0.3s ease; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -343,6 +344,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
   <div class="header-actions">
     <span id="doc-size-display" style="font-size:0.7rem;color:#6B7280;white-space:nowrap"></span>
+    <button id="btn-refresh" class="header-btn" title="最新データに更新">🔄</button>
     <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
     <button id="btn-today" class="header-btn" title="今日へ移動">今日</button>
   </div>
@@ -1167,6 +1169,30 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(cell&&cell.dataset.date) openDetailPanel(cell.dataset.date);
   });
   document.getElementById('btn-today').addEventListener('click',()=>{baseMonth=new Date();renderAllMonths();});
+  document.getElementById('btn-refresh').addEventListener('click',()=>{
+    const btn=document.getElementById('btn-refresh');
+    btn.style.animation='spin 0.5s';
+    setTimeout(()=>{btn.style.animation='';},500);
+    if(firebaseDb){
+      // Firestoreから最新データを再取得
+      const c=loadSyncConfig();
+      if(c?.userId){
+        firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
+          if(doc.exists){
+            const rd=doc.data();
+            const remoteEvts=rd.events||{};
+            remoteEvts.__deletedIds=rd.deletedIds||{};
+            mergeEvents(remoteEvts);
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+            renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+            updateDocSizeDisplay(); updatePhotoCount();
+          }
+        }).catch(()=>{});
+      }
+    } else {
+      loadEvents(); renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+    }
+  });
 
   // ===== 詳細パネル =====
   function openDetailPanel(dk) {
@@ -1709,6 +1735,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   baseMonth=new Date();
   renderAllMonths();
   initFirebase();
+
+  // ページがフォーカスを取り戻した時に自動で最新データを取得
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'&&firebaseDb){
+      const c=loadSyncConfig();
+      if(c?.userId){
+        firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
+          if(doc.exists){
+            const rd=doc.data();
+            const remoteEvts=rd.events||{};
+            remoteEvts.__deletedIds=rd.deletedIds||{};
+            mergeEvents(remoteEvts);
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+            renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+          }
+        }).catch(()=>{});
+      }
+    }
+  });
 })();
 </script>
 
