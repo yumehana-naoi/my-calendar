@@ -712,6 +712,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let lastSyncedJSON = '';
   let isSyncingToFirebase = false;
   let photoUsageBytes = 0;
+  let deletedIds = {}; // {eventId: timestamp} 削除済みIDの墓標
 
   // 毎月日セレクタ初期化
   const monthlyDaySelect = document.getElementById('monthly-day');
@@ -904,8 +905,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
   function addEvent(dk,ev) { if(!events[dk]) events[dk]=[]; events[dk].push(ev); }
   function updateEvent(dk,id,updates) { if(!events[dk])return; const idx=events[dk].findIndex(e=>e.id===id); if(idx!==-1) Object.assign(events[dk][idx],updates); }
-  function deleteEvent(dk,id) { if(!events[dk])return; events[dk]=events[dk].filter(e=>e.id!==id); if(events[dk].length===0) delete events[dk]; }
-  function deleteEventsByGroupId(gid) { const keys=Object.keys(events); for(let i=0;i<keys.length;i++){events[keys[i]]=events[keys[i]].filter(e=>e.groupId!==gid); if(events[keys[i]].length===0) delete events[keys[i]];} }
+  function deleteEvent(dk,id) { if(!events[dk])return; deletedIds[id]=getNow(); events[dk]=events[dk].filter(e=>e.id!==id); if(events[dk].length===0) delete events[dk]; }
+  function deleteEventsByGroupId(gid) { const keys=Object.keys(events); for(let i=0;i<keys.length;i++){if(!events[keys[i]])continue;events[keys[i]].forEach(e=>{if(e.groupId===gid)deletedIds[e.id]=getNow();});events[keys[i]]=events[keys[i]].filter(e=>e.groupId!==gid); if(events[keys[i]].length===0) delete events[keys[i]];} }
   function getEventsForDate(dk) { const evs=events[dk]; if(!evs||evs.length===0)return[]; return evs.slice().sort((a,b)=>(a.time||'').localeCompare(b.time||'')); }
 
   // 予定を別の日に移動
@@ -981,39 +982,73 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             }
             if(!initialLoadDone){
               initialLoadDone=true;
-              if(rUpd>=lUpd){ events=rd.events||{}; }
+              const remoteEvents=rd.events||{};
+              remoteEvents.__deletedIds=rd.deletedIds||{};
+              // 常にマージ: リモートとローカル両方の予定を残す（削除済みは除外）
+              mergeEvents(remoteEvents);
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-              localStorage.setItem(LAST_MODIFIED_KEY,rUpd>lUpd?rUpd:lUpd);
+              localStorage.setItem(LAST_MODIFIED_KEY,getNow());
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               syncToFirebase(getNow());
             } else {
               if(isSyncingToFirebase) return;
               const remoteJSON=JSON.stringify(rd.events||{});
               if(remoteJSON===lastSyncedJSON) return;
-              isSyncingFromFirebase=true; events=rd.events||{};
-              lastSyncedJSON=remoteJSON;
+              isSyncingFromFirebase=true;
+              const remoteEvts=rd.events||{};
+              remoteEvts.__deletedIds=rd.deletedIds||{};
+              // リモートのデータをベースに、ローカルのみの予定もマージ（削除済みは除外）
+              const localBackup={...events};
+              events=remoteEvts;
+              delete events.__deletedIds;
+              mergeEvents(localBackup);
+              lastSyncedJSON=JSON.stringify(events);
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               isSyncingFromFirebase=false;
+              // ローカルに追加分があればFirebaseにも反映
+              if(JSON.stringify(events)!==remoteJSON) syncToFirebase(getNow());
             }
           } else { initialLoadDone=true; syncToFirebase(getNow()); }
         });
       updateSyncStatus('connected','接続中 ✓');
     } catch(err){ console.error('Firebase init error:',err); updateSyncStatus('error','エラー: '+err.message); }
   }
-  function mergeEvents(re) { for(const dk of Object.keys(re)){if(!events[dk]){events[dk]=re[dk];}else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id))events[dk].push(r);}}} }
+  function mergeEvents(re) {
+    // 両方の削除済みIDを統合
+    const allDeleted={...deletedIds,...(re.__deletedIds||{})};
+    deletedIds=allDeleted;
+    delete re.__deletedIds;
+    for(const dk of Object.keys(re)){
+      if(!events[dk]){events[dk]=re[dk].filter(e=>!allDeleted[e.id]);}
+      else{const ids=new Set(events[dk].map(e=>e.id));for(const r of re[dk]){if(!ids.has(r.id)&&!allDeleted[r.id])events[dk].push(r);}}
+    }
+    // ローカル側も削除済みを除去
+    for(const dk of Object.keys(events)){
+      if(!events[dk])continue;
+      events[dk]=events[dk].filter(e=>!allDeleted[e.id]);
+      if(events[dk].length===0) delete events[dk];
+    }
+  }
+  function cleanupDeletedIds() {
+    const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
+    const cutoffStr=cutoff.toISOString();
+    for(const id of Object.keys(deletedIds)){
+      if(deletedIds[id]<cutoffStr) delete deletedIds[id];
+    }
+  }
   function syncToFirebase(ts) {
     const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return;
+    cleanupDeletedIds();
     // Firestoreドキュメントサイズチェック（1MB制限）
     const docKB=estimateDocSizeKB();
     if(docKB>=950){
-      console.error('Firestoreドキュメントサイズが1MB制限に近いため同期をスキップしました('+Math.round(docKB)+'KB)');
-      updateSyncStatus('error','容量警告: '+Math.round(docKB)+'KB/1MB');
+      updateSyncStatus('error','同期停止: 容量超過 '+Math.round(docKB)+'KB/1MB');
       return;
     }
-    if(docKB>=700) updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB/1MB)');
+    updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB)');
     isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
-    firebaseDb.collection('calendars').doc(c.userId).set({events:events,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; updateDocSizeDisplay(); }).catch(err=>{ isSyncingToFirebase=false; console.error('Sync error:',err); });
+    firebaseDb.collection('calendars').doc(c.userId).set({events:events,deletedIds:deletedIds,updatedAt:ts||getNow()}).then(()=>{ isSyncingToFirebase=false; updateDocSizeDisplay(); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); });
   }
   function loadScript(src) { return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);}); }
   function updateSyncStatus(type,msg) { const el=document.getElementById('sync-status'); el.className='sync-status '+type; el.textContent=msg; }
