@@ -1160,21 +1160,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     btn.style.animation='spin 0.5s';
     setTimeout(()=>{btn.style.animation='';},500);
     if(firebaseDb){
-      // Firestoreから最新データを再取得
       const c=loadSyncConfig();
       if(c?.userId){
-        firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
-          if(doc.exists){
-            const rd=doc.data();
-            if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-            events=rd.events||{};
-            deduplicateEvents();
-            lastSyncedJSON=JSON.stringify(events);
-            localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-            renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-            updateDocSizeDisplay(); updatePhotoCount();
-          }
-        }).catch(()=>{});
+        // まずローカルの変更をFirestoreに送信
+        syncToFirebase(getNow());
+        // 少し待ってからFirestoreの最新データを取得
+        setTimeout(()=>{
+          firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
+            if(doc.exists){
+              const rd=doc.data();
+              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+              events=rd.events||{};
+              deduplicateEvents();
+              lastSyncedJSON=JSON.stringify(events);
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+              updateDocSizeDisplay(); updatePhotoCount();
+            }
+          }).catch(()=>{});
+        },1000);
       }
     } else {
       loadEvents(); renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
@@ -1730,17 +1734,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(document.visibilityState==='visible'&&firebaseDb){
       const c=loadSyncConfig();
       if(c?.userId){
-        firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
-          if(doc.exists){
-            const rd=doc.data();
-            if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
-            events=rd.events||{};
-            deduplicateEvents();
-            lastSyncedJSON=JSON.stringify(events);
-            localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
-            renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
-          }
-        }).catch(()=>{});
+        // まずローカルの変更をFirestoreに送信
+        syncToFirebase(getNow());
+        // 少し待ってから最新データを取得
+        setTimeout(()=>{
+          firebaseDb.collection('calendars').doc(c.userId).get().then(doc=>{
+            if(doc.exists){
+              const rd=doc.data();
+              if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
+              events=rd.events||{};
+              deduplicateEvents();
+              lastSyncedJSON=JSON.stringify(events);
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
+              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+            }
+          }).catch(()=>{});
+        },1000);
       }
     }
   });
