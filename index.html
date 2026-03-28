@@ -1156,13 +1156,38 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     projectId: 'yumesato-calendar',
     storageBucket: 'yumesato-calendar.firebasestorage.app'
   };
+  // Cookie バックアップ（localStorageが消えた場合の復元用）
+  function saveUserIdCookie(userId){
+    try{
+      var d=new Date();d.setFullYear(d.getFullYear()+5);
+      document.cookie='yumehana_uid='+encodeURIComponent(userId)+';expires='+d.toUTCString()+';path=/;SameSite=Lax';
+    }catch(e){}
+  }
+  function getUserIdFromCookie(){
+    try{
+      var m=document.cookie.match(/yumehana_uid=([^;]+)/);
+      return m?decodeURIComponent(m[1]):'';
+    }catch(e){return '';}
+  }
   function loadSyncConfig() {
     try{
       const site=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};
-      // 埋め込み設定を優先、localStorage設定はフォールバック
       const common=EMBEDDED_FIREBASE_CONFIG;
       const merged={...common,...site};
+      // localStorageにuserIdがない場合、cookieから復元
+      if(!merged.userId){
+        const cookieUid=getUserIdFromCookie();
+        if(cookieUid){
+          merged.userId=cookieUid;
+          // localStorageにも復元保存
+          site.userId=cookieUid;
+          localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
+          console.log('[SYNC] userId restored from cookie:',cookieUid);
+        }
+      }
       if(!merged.userId) return null;
+      // 見つかったuserIdをcookieにもバックアップ
+      saveUserIdCookie(merged.userId);
       return merged;
     }catch{return null;}
   }
@@ -2260,6 +2285,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(!userId){alert('ユーザーIDを入力してください。');return;}
     const site={userId};
     localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
+    saveUserIdCookie(userId);
     initFirebase();
   });
   // 共有リンク生成
@@ -2342,6 +2368,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           var site={userId:cfg.userId};
           localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
           localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
+          saveUserIdCookie(cfg.userId);
           // URLパラメータを消す（再読み込み時に再適用されないように）
           window.history.replaceState({},'',window.location.pathname);
         }
