@@ -96,7 +96,7 @@ body {
   padding: 6px 4px;
 }
 
-.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 8px; }
+.month-grid { display: grid; grid-template-columns: repeat(7, minmax(min-content, 1fr)); gap: 2px; margin-bottom: 8px; }
 
 .day-cell {
   background: var(--card-bg); border: 1px solid var(--border);
@@ -121,7 +121,7 @@ body {
 .day-event-item {
   font-size: 0.65rem; padding: 2px 4px; margin-bottom: 1px;
   border-radius: 3px; white-space: normal;
-  overflow-wrap: break-word; word-break: break-all;
+  overflow-wrap: break-word;
   line-height: 1.3;
 }
 .day-event-item.color-0 { background: var(--color0-bg); border-left: 3px solid var(--color0); }
@@ -385,15 +385,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   width: 3px; height: 24px; border-radius: 2px; flex-shrink: 0;
 }
 .widget-event-content {
-  flex: 1; min-width: 0; max-width: 25ch;
+  flex: 1; min-width: 0; max-width: 25em;
 }
 .widget-event-title {
   font-size: 0.85rem; font-weight: 600; color: #1F2937;
-  white-space: normal; overflow-wrap: break-word; word-break: break-all;
+  white-space: normal; overflow-wrap: break-word;
 }
 .widget-event-detail {
   font-size: 0.75rem; color: #6B7280; margin-top: 2px;
-  white-space: normal; overflow-wrap: break-word; word-break: break-all;
+  white-space: normal; overflow-wrap: break-word;
 }
 .widget-event-row.important {
   background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 50%, #FCA5A5 100%);
