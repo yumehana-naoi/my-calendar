@@ -363,9 +363,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .today-widget {
   margin: 0 0 8px; padding: 16px 8px;
   position: sticky; left: 0; z-index: 10; width: 100%; box-sizing: border-box;
-  background: linear-gradient(135deg, #F5FAF5 0%, #EFF8EF 40%, #F0F8F0 100%);
-  border-radius: 16px; border: 1px solid #B8D8B8;
-  box-shadow: 0 2px 12px rgba(107,175,122,0.1);
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFE8EC 40%, #FFF0F0 100%);
+  border-radius: 16px; border: 1px solid #F0C0C8;
+  box-shadow: 0 2px 12px rgba(220,120,140,0.1);
   position: relative; overflow: hidden;
 }
 .today-widget::before {
@@ -378,12 +378,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 1.2rem; color: #A5D6A7; opacity: 0.3;
 }
 .widget-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 12px;
   position: relative; z-index: 1;
 }
+.widget-header-title {
+  font-size: 1.05rem; font-weight: 700; color: #2E7D32;
+  letter-spacing: 1px;
+}
 .widget-date {
-  font-size: 0.75rem; color: #3E6B4A; font-weight: 600;
-  background: rgba(255,255,255,0.7); padding: 3px 10px;
+  font-size: 0.78rem; color: #4A7A56; font-weight: 600;
+  background: rgba(255,255,255,0.7); padding: 3px 12px;
   border-radius: 12px; letter-spacing: 0.5px;
 }
 .widget-greeting {
@@ -1113,7 +1117,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const now=getNow();
     localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
     localStorage.setItem(LAST_MODIFIED_KEY,now);
-    if(!isSyncingFromFirebase){ if(firebaseDb) showSyncBar('☁️ 同期中...','#2563EB',false); syncToFirebase(now); }
+    if(!isSyncingFromFirebase){
+      console.log('[SYNC] saveEvents called, firebaseDb=',!!firebaseDb,'isSyncingToFirebase=',isSyncingToFirebase);
+      if(firebaseDb){
+        showSyncBar('☁️ 同期中...','#2563EB',false);
+        // 前回の同期が完了していなくても強制的に同期実行
+        isSyncingToFirebase=false;
+        syncToFirebase(now);
+      }
+    } else {
+      console.log('[SYNC] saveEvents skipped: isSyncingFromFirebase=true');
+    }
   }
   function addEvent(dk,ev) { if(!events[dk]) events[dk]=[]; events[dk].push(ev); }
   function updateEvent(dk,id,updates) { if(!events[dk])return; const idx=events[dk].findIndex(e=>e.id===id); if(idx!==-1) Object.assign(events[dk][idx],updates); }
@@ -2423,6 +2437,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     var dateStr=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+WEEKDAYS[d.getDay()]+'曜日';
     var colorMap=['var(--color0)','var(--color1)','var(--color2)','var(--color3)'];
     var html='<div class="widget-header">'
+      +'<div class="widget-header-title">🌿 本日の予定</div>'
       +'<div class="widget-date">'+dateStr+'</div>'
       +'</div>';
     html+='<div class="widget-events">';
