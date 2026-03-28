@@ -1375,21 +1375,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     function clamp(){
-      // 画像の表示サイズ
       var sw=fitW*scale, sh=fitH*scale;
-      // 画像を中央に表示するための基準位置
-      var cx=(cW-sw)/2, cy=(cH-sh)/2;
-      // 画像が画面より小さい場合は中央固定
-      if(sw<=cW){ tx=cx; }
-      else{
-        // 左端: tx <= 0, 右端: tx >= cW - sw
-        if(tx>0) tx=0;
-        if(tx<cW-sw) tx=cW-sw;
+      if(sw<=cW){
+        // 画面より小さい→中央固定
+        tx=(cW-sw)/2;
+      } else {
+        // 画面より大きい→端まで移動可能（余白20px追加で端が見やすい）
+        var margin=20;
+        if(tx>margin) tx=margin;
+        if(tx<cW-sw-margin) tx=cW-sw-margin;
       }
-      if(sh<=cH){ ty=cy; }
-      else{
-        if(ty>0) ty=0;
-        if(ty<cH-sh) ty=cH-sh;
+      if(sh<=cH){
+        ty=(cH-sh)/2;
+      } else {
+        var margin=20;
+        if(ty>margin) ty=margin;
+        if(ty<cH-sh-margin) ty=cH-sh-margin;
       }
     }
 
@@ -1414,10 +1415,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     function initFit(){
-      cW=lbInner.clientWidth; cH=lbInner.clientHeight;
+      // レイアウト確定後にコンテナサイズを取得
+      cW=lbInner.clientWidth||window.innerWidth;
+      cH=lbInner.clientHeight||window.innerHeight;
       var nw=lbImg.naturalWidth, nh=lbImg.naturalHeight;
-      if(!nw||!nh) return;
-      var r=Math.min(cW*0.92/nw, cH*0.92/nh, 1);
+      if(!nw||!nh||!cW||!cH) return;
+      var r=Math.min(cW*0.9/nw, cH*0.9/nh, 1);
       fitW=nw*r; fitH=nh*r;
       lbImg.style.width=fitW+'px'; lbImg.style.height=fitH+'px';
       scale=1; centerImage(); apply();
@@ -1425,12 +1428,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     function openLightbox(src){
-      lbImg.src=src;
       lb.classList.remove('hidden');
-      var ready=function(){ initFit(); };
-      lbImg.onload=ready;
-      if(lbImg.complete&&lbImg.naturalWidth>0) setTimeout(ready,0);
+      // onloadをsrcより先にセット（同期読込対策）
+      lbImg.onload=function(){
+        // requestAnimationFrameでレイアウト確定を待つ
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ initFit(); }); });
+      };
+      lbImg.src=src;
+      // キャッシュ済み画像対応
+      if(lbImg.complete&&lbImg.naturalWidth>0){
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ initFit(); }); });
+      }
     }
+
+    // ウィンドウリサイズ時に再計算
+    window.addEventListener('resize',function(){
+      if(!lb.classList.contains('hidden')&&lbImg.naturalWidth>0) initFit();
+    });
     function closeLightbox(){
       lb.classList.add('hidden'); lbImg.src='';
       scale=1; tx=0; ty=0;
