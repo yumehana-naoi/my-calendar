@@ -5,10 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="夢花カレンダー">
+<meta name="theme-color" content="#E8A0BF">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>カレンダー</title>
+<title>夢花カレンダー</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,15 +28,15 @@
   --sunday: #E53E3E;
   --saturday: #3B82F6;
   --holiday: #E53E3E;
-  --today-border: #F59E0B;
-  --today-bg: #FFFBEB;
-  --bg: #F9FAFB;
+  --today-border: #E8A0BF;
+  --today-bg: #FFF5F9;
+  --bg: #FDF8F5;
   --card-bg: #FFFFFF;
   --text: #1F2937;
   --text-light: #6B7280;
-  --border: #E5E7EB;
+  --border: #F0DDD5;
   --radius: 8px;
-  --accent: #5B9BD5;
+  --accent: #D4789C;
 }
 
 body {
@@ -46,18 +50,19 @@ body {
 #app-header {
   position: sticky; top: 0; z-index: 100;
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 10px; background: #FFFFFF;
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  padding: 8px 10px; background: linear-gradient(135deg, #FFF5F0 0%, #FFF0F5 50%, #F5F0FF 100%);
+  border-bottom: 1px solid #F0D5E0;
+  box-shadow: 0 1px 6px rgba(212,120,156,0.1);
   gap: 6px; flex-wrap: nowrap;
 }
 .header-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .header-btn {
-  padding: 5px 8px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: white;
-  cursor: pointer; font-size: 0.82rem; transition: background 0.15s;
+  padding: 5px 8px; border: 1px solid #F0D5E0;
+  border-radius: var(--radius); background: rgba(255,255,255,0.8);
+  cursor: pointer; font-size: 0.82rem; transition: all 0.15s;
+  color: #8B5E6B;
 }
-.header-btn:hover { background: var(--bg); }
+.header-btn:hover { background: #FFF0F5; border-color: #E8A0BF; }
 
 #main-layout { display: flex; max-width: 1600px; margin: 0 auto; }
 #calendar-container { flex: 1; min-width: 0; padding: 8px; }
@@ -74,7 +79,7 @@ body {
 .panel-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
-  min-width: 400px; background: #FAFBFC;
+  min-width: 400px; background: linear-gradient(135deg, #FFF8F5, #FFF5F9);
 }
 .panel-header h2 { font-size: 1.1rem; white-space: nowrap; }
 .panel-body { flex: 1; overflow-y: auto; min-width: 400px; min-height: 0; }
@@ -113,7 +118,7 @@ body {
 .day-number { font-size: 0.85rem; font-weight: 600; padding: 2px 4px; border-radius: 4px; display: inline-block; margin-bottom: 2px; line-height: 1; }
 .day-cell.sunday .day-number, .day-cell.holiday .day-number { color: var(--sunday); }
 .day-cell.saturday .day-number { color: var(--saturday); }
-.day-cell.today .day-number { background: var(--today-border); color: white; padding: 3px 6px; }
+.day-cell.today .day-number { background: linear-gradient(135deg, #E8A0BF, #D4789C); color: white; padding: 3px 6px; }
 
 .holiday-name { font-size: 0.55rem; color: var(--holiday); line-height: 1.1; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -197,7 +202,7 @@ body {
   font-size: 0.9rem; font-family: inherit; background: white;
 }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,120,156,0.3);
 }
 
 .color-picker { display: flex; gap: 12px; align-items: center; }
@@ -208,7 +213,7 @@ body {
 
 .weekday-selector, .nth-selector { display: flex; gap: 6px; flex-wrap: wrap; }
 .weekday-btn, .nth-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: white; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
-.weekday-btn.active, .nth-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+.weekday-btn.active, .nth-btn.active { background: linear-gradient(135deg, #E8A0BF, #D4789C); color: white; border-color: #D4789C; }
 
 .interval-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .interval-row span { font-size: 0.85rem; white-space: nowrap; }
@@ -230,7 +235,7 @@ body {
 .mini-cal-day:hover { background: var(--bg); }
 .mini-cal-day.empty { cursor: default; }
 .mini-cal-day.empty:hover { background: transparent; }
-.mini-cal-day.checked { background: var(--accent); color: white; font-weight: 700; }
+.mini-cal-day.checked { background: linear-gradient(135deg, #E8A0BF, #D4789C); color: white; font-weight: 700; }
 .mini-cal-day.sun { color: var(--sunday); }
 .mini-cal-day.sat { color: var(--saturday); }
 .mini-cal-day.checked.sun, .mini-cal-day.checked.sat { color: white; }
@@ -242,7 +247,7 @@ body {
 .date-chip button:hover { color: var(--sunday); }
 
 
-.primary-btn { width: 100%; padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.primary-btn { width: 100%; padding: 10px 20px; background: linear-gradient(135deg, #E8A0BF, #D4789C); color: white; border: none; border-radius: var(--radius); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; box-shadow: 0 2px 8px rgba(212,120,156,0.25); }
 .primary-btn:hover { opacity: 0.85; }
 .secondary-btn { padding: 10px 20px; background: white; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; cursor: pointer; }
 .secondary-btn:hover { background: var(--bg); }
@@ -339,10 +344,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
   background: white; color: var(--text); user-select: none;
 }
-.tag-label:hover { border-color: #F59E0B; background: #FFFBEB; }
-.tag-label input[type="checkbox"] { accent-color: #F59E0B; margin: 0; width: 14px; height: 14px; }
-.tag-label.checked { background: #FEF3C7; border-color: #F59E0B; color: #B45309; font-weight: 600; }
-.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #EF4444, #DC2626); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(239,68,68,0.35); letter-spacing: 0.5px; }
+.tag-label:hover { border-color: #E8A0BF; background: #FFF5F9; }
+.tag-label input[type="checkbox"] { accent-color: #D4789C; margin: 0; width: 14px; height: 14px; }
+.tag-label.checked { background: #FFF0F5; border-color: #E8A0BF; color: #8B3A62; font-weight: 600; }
+.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #D4789C, #C0547E); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(212,120,156,0.35); letter-spacing: 0.5px; }
 /* 表記設定モーダル */
 .tag-setting-list { margin-top: 8px; }
 .tag-setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
@@ -354,32 +359,31 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .today-widget {
   margin: 0 0 8px; padding: 16px 8px;
   position: sticky; left: 0; z-index: 10; width: 100%; box-sizing: border-box;
-  background: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 50%, #FFEDD5 100%);
-  border-radius: 16px; border: 1px solid #FDE68A;
-  box-shadow: 0 2px 12px rgba(251,191,36,0.12);
+  background: linear-gradient(135deg, #FFF5F0 0%, #FFF0F5 40%, #FEF0E8 100%);
+  border-radius: 16px; border: 1px solid #F0D0D8;
+  box-shadow: 0 2px 12px rgba(212,120,156,0.1);
   position: relative; overflow: hidden;
 }
 .today-widget::before {
-  content: ''; position: absolute; top: -20px; right: -20px;
-  width: 80px; height: 80px; border-radius: 50%;
-  background: rgba(251,191,36,0.15);
+  content: '🌸'; position: absolute; top: 8px; right: 12px;
+  font-size: 1.8rem; opacity: 0.2;
 }
 .today-widget::after {
   content: ''; position: absolute; bottom: -15px; left: 30px;
   width: 50px; height: 50px; border-radius: 50%;
-  background: rgba(251,146,60,0.1);
+  background: rgba(212,120,156,0.08);
 }
 .widget-header {
   display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
   position: relative; z-index: 1;
 }
 .widget-date {
-  font-size: 0.75rem; color: #92400E; font-weight: 600;
+  font-size: 0.75rem; color: #8B5E6B; font-weight: 600;
   background: rgba(255,255,255,0.7); padding: 3px 10px;
   border-radius: 12px; letter-spacing: 0.5px;
 }
 .widget-greeting {
-  font-size: 1rem; font-weight: 700; color: #78350F;
+  font-size: 1rem; font-weight: 700; color: #7A3E5B;
 }
 .widget-events { position: relative; z-index: 1; }
 .widget-event-row {
@@ -436,7 +440,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   50% { box-shadow: 0 0 16px rgba(239,68,68,0.4); }
 }
 .widget-empty {
-  text-align: center; padding: 8px; color: #92400E;
+  text-align: center; padding: 8px; color: #8B5E6B;
   font-size: 0.85rem; opacity: 0.7; font-style: italic;
 }
 
@@ -454,7 +458,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   max-width: 140px; min-width: 0;
 }
 .site-selector-wrap select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,120,156,0.3);
 }
 
 /* Site management modal */
@@ -485,7 +489,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 0.9rem; font-family: inherit; background: white;
 }
 .site-add-row input:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,0.3);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(212,120,156,0.3);
 }
 
 /* Photo styles */
@@ -2715,6 +2719,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   populateSiteSelect();
   updateTitle();
 })();
+</script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}
 </script>
 </body>
 </html>
