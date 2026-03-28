@@ -331,13 +331,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .detail-photos-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .detail-event-photo { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); transition: opacity 0.15s; }
 .detail-event-photo:hover { opacity: 0.8; }
-#photo-lightbox { background: rgba(0,0,0,0.92); z-index: 400; cursor: default; align-items: center; justify-content: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+#photo-lightbox { background: rgba(0,0,0,0.92); z-index: 400; touch-action: none; user-select: none; -webkit-user-select: none; }
 #photo-lightbox:not(.hidden) { display: flex; }
-#photo-lightbox .lightbox-inner { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.lightbox-img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 4px; transform-origin: 0 0; will-change: transform; pointer-events: none; }
-.lightbox-close-btn { position: absolute; top: 12px; right: 16px; z-index: 410; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: white; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: background 0.15s; }
-.lightbox-close-btn:hover { background: rgba(255,255,255,0.3); }
-.lightbox-zoom-hint { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.75rem; pointer-events: none; transition: opacity 0.3s; }
+#photo-lightbox .lightbox-inner { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.lightbox-img { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; max-width: none; max-height: none; }
+.lightbox-close-btn { position: absolute; top: 12px; right: 16px; z-index: 420; width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: background 0.15s; }
+.lightbox-close-btn:hover { background: rgba(255,255,255,0.4); }
+.lightbox-zoom-controls { position: absolute; bottom: 20px; right: 20px; z-index: 420; display: flex; gap: 8px; }
+.lightbox-zoom-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: background 0.15s; }
+.lightbox-zoom-btn:hover { background: rgba(255,255,255,0.4); }
+.lightbox-zoom-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.75rem; pointer-events: none; transition: opacity 0.3s; }
 </style>
 </head>
 <body>
@@ -570,10 +573,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 <div id="photo-lightbox" class="modal hidden">
   <button class="lightbox-close-btn" id="lightbox-close">✕</button>
+  <div class="lightbox-zoom-controls">
+    <button class="lightbox-zoom-btn" id="lightbox-zoom-out">−</button>
+    <button class="lightbox-zoom-btn" id="lightbox-zoom-in">＋</button>
+  </div>
   <div class="lightbox-inner" id="lightbox-inner">
     <img id="lightbox-img" class="lightbox-img">
   </div>
-  <div class="lightbox-zoom-hint" id="lightbox-hint">ダブルタップで拡大 / ピンチで拡大縮小</div>
+  <div class="lightbox-zoom-hint" id="lightbox-hint">ダブルタップ/ダブルクリックで拡大</div>
 </div>
 
 <script>
@@ -1346,168 +1353,208 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         lbImg=document.getElementById('lightbox-img'),
         lbInner=document.getElementById('lightbox-inner'),
         lbHint=document.getElementById('lightbox-hint'),
-        lbClose=document.getElementById('lightbox-close');
-    var scale=1, posX=0, posY=0, minScale=1, maxScale=5;
-    var isDragging=false, hasMoved=false, dragStartX=0, dragStartY=0, dragPosX=0, dragPosY=0;
-    var lastTap=0, pinchStartDist=0, pinchStartScale=1, isPinching=false;
-    var imgW=0, imgH=0, containerW=0, containerH=0;
+        lbClose=document.getElementById('lightbox-close'),
+        btnZoomIn=document.getElementById('lightbox-zoom-in'),
+        btnZoomOut=document.getElementById('lightbox-zoom-out');
 
-    function resetZoom(){ scale=1; posX=0; posY=0; applyTransform(); if(lbHint) lbHint.style.opacity='1'; }
-    function applyTransform(){
-      var cx=(containerW - imgW*scale)/2 + posX;
-      var cy=(containerH - imgH*scale)/2 + posY;
-      lbImg.style.transform='translate('+cx+'px,'+cy+'px) scale('+scale+')';
+    // State
+    var scale=1, tx=0, ty=0; // tx,ty = translate of image top-left
+    var fitW=0, fitH=0; // fitted image display size at scale=1
+    var cW=0, cH=0; // container size
+    var minScale=1, maxScale=5;
+
+    // Drag state
+    var dragging=false, moved=false, startX=0, startY=0, startTx=0, startTy=0;
+    // Touch state
+    var lastTapTime=0, pinching=false, pinchDist0=0, pinchScale0=1;
+    // Pinch center tracking for pan during pinch
+    var pinchMidX0=0, pinchMidY0=0, pinchTx0=0, pinchTy0=0;
+
+    function apply(){
+      lbImg.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')';
     }
-    function clampPos(){
-      var sw=imgW*scale, sh=imgH*scale;
-      // 画像が画面より大きい場合：画像端が画面端に届くまでパン可能
-      // 画像が画面より小さい場合：中央に固定
-      if(sw>containerW){
-        var maxPanX=(sw - containerW)/2;
-        posX=Math.max(-maxPanX, Math.min(maxPanX, posX));
-      } else { posX=0; }
-      if(sh>containerH){
-        var maxPanY=(sh - containerH)/2;
-        posY=Math.max(-maxPanY, Math.min(maxPanY, posY));
-      } else { posY=0; }
+
+    function clamp(){
+      // 画像の表示サイズ
+      var sw=fitW*scale, sh=fitH*scale;
+      // 画像を中央に表示するための基準位置
+      var cx=(cW-sw)/2, cy=(cH-sh)/2;
+      // 画像が画面より小さい場合は中央固定
+      if(sw<=cW){ tx=cx; }
+      else{
+        // 左端: tx <= 0, 右端: tx >= cW - sw
+        if(tx>0) tx=0;
+        if(tx<cW-sw) tx=cW-sw;
+      }
+      if(sh<=cH){ ty=cy; }
+      else{
+        if(ty>0) ty=0;
+        if(ty<cH-sh) ty=cH-sh;
+      }
     }
-    function zoomAt(cx,cy,newScale){
-      newScale=Math.max(minScale, Math.min(maxScale, newScale));
+
+    function centerImage(){
+      var sw=fitW*scale, sh=fitH*scale;
+      tx=(cW-sw)/2; ty=(cH-sh)/2;
+    }
+
+    function setScale(newScale, pivotX, pivotY){
+      // pivotX, pivotY = screen coords relative to container
+      newScale=Math.max(minScale,Math.min(maxScale,newScale));
       if(Math.abs(newScale-scale)<0.001) return;
-      var ratio=newScale/scale;
-      posX=cx - (cx - posX)*ratio;
-      posY=cy - (cy - posY)*ratio;
+      // 画像座標系でのピボット点
+      var imgX=(pivotX-tx)/scale;
+      var imgY=(pivotY-ty)/scale;
       scale=newScale;
-      clampPos(); applyTransform();
-      if(lbHint && scale>1.01) lbHint.style.opacity='0';
-      lbInner.style.cursor=scale>1.01?'grab':'default';
+      // ピボット点が同じ画面位置に来るようtx,tyを調整
+      tx=pivotX-imgX*scale;
+      ty=pivotY-imgY*scale;
+      clamp(); apply();
+      if(lbHint) lbHint.style.opacity=scale>1.05?'0':'1';
     }
-    function initDimensions(){
-      containerW=lbInner.clientWidth; containerH=lbInner.clientHeight;
-      var natW=lbImg.naturalWidth, natH=lbImg.naturalHeight;
-      if(!natW||!natH) return;
-      var fitScale=Math.min(containerW*0.9/natW, containerH*0.9/natH, 1);
-      imgW=natW*fitScale; imgH=natH*fitScale;
+
+    function initFit(){
+      cW=lbInner.clientWidth; cH=lbInner.clientHeight;
+      var nw=lbImg.naturalWidth, nh=lbImg.naturalHeight;
+      if(!nw||!nh) return;
+      var r=Math.min(cW*0.92/nw, cH*0.92/nh, 1);
+      fitW=nw*r; fitH=nh*r;
+      lbImg.style.width=fitW+'px'; lbImg.style.height=fitH+'px';
+      scale=1; centerImage(); apply();
+      if(lbHint) lbHint.style.opacity='1';
     }
+
     function openLightbox(src){
       lbImg.src=src;
       lb.classList.remove('hidden');
-      lbImg.onload=function(){ initDimensions(); resetZoom(); };
-      if(lbImg.complete && lbImg.naturalWidth>0){ initDimensions(); resetZoom(); }
+      var ready=function(){ initFit(); };
+      lbImg.onload=ready;
+      if(lbImg.complete&&lbImg.naturalWidth>0) setTimeout(ready,0);
     }
-    function closeLightbox(){ lb.classList.add('hidden'); lbImg.src=''; scale=1; posX=0; posY=0; }
+    function closeLightbox(){
+      lb.classList.add('hidden'); lbImg.src='';
+      scale=1; tx=0; ty=0;
+    }
 
-    // Open from detail panel
+    // --- 写真クリックで開く ---
     document.getElementById('detail-events-list').addEventListener('click',function(e){
-      var photoEl=e.target.closest('[data-action="show-photo"]');
-      if(photoEl){ openLightbox(photoEl.src); return; }
+      var p=e.target.closest('[data-action="show-photo"]');
+      if(p){ openLightbox(p.src); }
     });
 
-    // ✕ボタンで閉じる
+    // --- 閉じる：✕ボタンのみ + Escキー ---
     lbClose.addEventListener('click',function(e){ e.stopPropagation(); closeLightbox(); });
-
-    // 背景クリックで閉じる（画像の外側のみ）
-    lb.addEventListener('click',function(e){
-      if(e.target===lb) closeLightbox();
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'&&!lb.classList.contains('hidden')) closeLightbox();
     });
 
-    // ダブルクリックで拡大/縮小（PC）
+    // --- ズームボタン（PC用 +/−） ---
+    btnZoomIn.addEventListener('click',function(e){ e.stopPropagation(); setScale(scale*1.5, cW/2, cH/2); });
+    btnZoomOut.addEventListener('click',function(e){ e.stopPropagation(); setScale(scale/1.5, cW/2, cH/2); });
+
+    // --- ダブルクリック（PC）---
     lbInner.addEventListener('dblclick',function(e){
-      e.preventDefault();
-      var rect=lbInner.getBoundingClientRect();
-      var cx=e.clientX - rect.left - containerW/2;
-      var cy=e.clientY - rect.top - containerH/2;
-      if(scale>1.05){ resetZoom(); }
-      else{ zoomAt(cx, cy, 2.5); }
+      e.preventDefault(); e.stopPropagation();
+      if(scale>1.05){ scale=1; centerImage(); clamp(); apply(); if(lbHint) lbHint.style.opacity='1'; }
+      else{
+        var rect=lbInner.getBoundingClientRect();
+        setScale(2.5, e.clientX-rect.left, e.clientY-rect.top);
+      }
     });
 
-    // マウスホイールでズーム（PC）
+    // --- マウスホイール（PC）---
     lbInner.addEventListener('wheel',function(e){
       e.preventDefault();
       var rect=lbInner.getBoundingClientRect();
-      var cx=e.clientX - rect.left - containerW/2;
-      var cy=e.clientY - rect.top - containerH/2;
-      var delta=e.deltaY>0?0.85:1.18;
-      zoomAt(cx, cy, scale*delta);
+      var factor=e.deltaY>0?0.85:1.18;
+      setScale(scale*factor, e.clientX-rect.left, e.clientY-rect.top);
     },{passive:false});
 
-    // マウスドラッグで移動（PC）- 拡大時のみ
+    // --- マウスドラッグ（PC） ---
     lbInner.addEventListener('mousedown',function(e){
       if(e.button!==0) return;
       e.preventDefault();
-      isDragging=true; hasMoved=false;
-      dragStartX=e.clientX; dragStartY=e.clientY;
-      dragPosX=posX; dragPosY=posY;
-      if(scale>1.01) lbInner.style.cursor='grabbing';
+      dragging=true; moved=false;
+      startX=e.clientX; startY=e.clientY;
+      startTx=tx; startTy=ty;
+      lbInner.style.cursor=scale>1.01?'grabbing':'default';
     });
     window.addEventListener('mousemove',function(e){
-      if(!isDragging) return;
-      var dx=e.clientX-dragStartX, dy=e.clientY-dragStartY;
-      if(Math.abs(dx)>3||Math.abs(dy)>3) hasMoved=true;
-      if(scale>1.01){
-        posX=dragPosX+dx; posY=dragPosY+dy;
-        clampPos(); applyTransform();
-      }
+      if(!dragging) return;
+      var dx=e.clientX-startX, dy=e.clientY-startY;
+      if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+      tx=startTx+dx; ty=startTy+dy;
+      clamp(); apply();
     });
     window.addEventListener('mouseup',function(){
-      if(isDragging){
-        isDragging=false;
-        lbInner.style.cursor=scale>1.01?'grab':'default';
-      }
+      if(!dragging) return;
+      dragging=false;
+      lbInner.style.cursor=scale>1.01?'grab':'default';
     });
 
-    // タッチ操作：ピンチズーム + ドラッグ移動 + ダブルタップ
+    // --- タッチ：ドラッグ移動 + ピンチズーム + ダブルタップ ---
     lbInner.addEventListener('touchstart',function(e){
       if(e.touches.length===1){
         var now=Date.now();
-        if(now-lastTap<300){
-          // ダブルタップ
+        if(now-lastTapTime<300){
           e.preventDefault();
-          var rect=lbInner.getBoundingClientRect();
-          var cx=e.touches[0].clientX - rect.left - containerW/2;
-          var cy=e.touches[0].clientY - rect.top - containerH/2;
-          if(scale>1.05){ resetZoom(); } else{ zoomAt(cx,cy,2.5); }
-          lastTap=0; return;
+          if(scale>1.05){ scale=1; centerImage(); clamp(); apply(); if(lbHint) lbHint.style.opacity='1'; }
+          else{
+            var rect=lbInner.getBoundingClientRect();
+            setScale(2.5, e.touches[0].clientX-rect.left, e.touches[0].clientY-rect.top);
+          }
+          lastTapTime=0; return;
         }
-        lastTap=now;
-        isDragging=true; hasMoved=false; isPinching=false;
-        dragStartX=e.touches[0].clientX; dragStartY=e.touches[0].clientY;
-        dragPosX=posX; dragPosY=posY;
+        lastTapTime=now;
+        dragging=true; moved=false; pinching=false;
+        startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+        startTx=tx; startTy=ty;
       } else if(e.touches.length===2){
         e.preventDefault();
-        isDragging=false; isPinching=true;
+        dragging=false; pinching=true;
         var dx=e.touches[0].clientX-e.touches[1].clientX;
         var dy=e.touches[0].clientY-e.touches[1].clientY;
-        pinchStartDist=Math.sqrt(dx*dx+dy*dy);
-        pinchStartScale=scale;
+        pinchDist0=Math.sqrt(dx*dx+dy*dy)||1;
+        pinchScale0=scale;
+        pinchMidX0=(e.touches[0].clientX+e.touches[1].clientX)/2;
+        pinchMidY0=(e.touches[0].clientY+e.touches[1].clientY)/2;
+        pinchTx0=tx; pinchTy0=ty;
       }
     },{passive:false});
-    lbInner.addEventListener('touchmove',function(e){
-      if(e.touches.length===2 && isPinching){
-        e.preventDefault();
-        var dx=e.touches[0].clientX-e.touches[1].clientX;
-        var dy=e.touches[0].clientY-e.touches[1].clientY;
-        var dist=Math.sqrt(dx*dx+dy*dy);
-        var newScale=pinchStartScale*(dist/pinchStartDist);
-        var rect=lbInner.getBoundingClientRect();
-        var midX=(e.touches[0].clientX+e.touches[1].clientX)/2 - rect.left - containerW/2;
-        var midY=(e.touches[0].clientY+e.touches[1].clientY)/2 - rect.top - containerH/2;
-        zoomAt(midX, midY, newScale);
-      } else if(e.touches.length===1 && isDragging && scale>1.01){
-        e.preventDefault();
-        var dx=e.touches[0].clientX-dragStartX, dy=e.touches[0].clientY-dragStartY;
-        if(Math.abs(dx)>3||Math.abs(dy)>3) hasMoved=true;
-        posX=dragPosX+dx; posY=dragPosY+dy;
-        clampPos(); applyTransform();
-      }
-    },{passive:false});
-    lbInner.addEventListener('touchend',function(e){
-      isDragging=false; isPinching=false;
-    });
 
-    // Escキーで閉じる
-    document.addEventListener('keydown',function(e){
-      if(e.key==='Escape'&&!lb.classList.contains('hidden')) closeLightbox();
+    lbInner.addEventListener('touchmove',function(e){
+      if(e.touches.length===2&&pinching){
+        e.preventDefault();
+        var dx=e.touches[0].clientX-e.touches[1].clientX;
+        var dy=e.touches[0].clientY-e.touches[1].clientY;
+        var dist=Math.sqrt(dx*dx+dy*dy)||1;
+        var rect=lbInner.getBoundingClientRect();
+        var midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+        var midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+        // ピンチ中心でズーム
+        var pivotX=pinchMidX0-rect.left;
+        var pivotY=pinchMidY0-rect.top;
+        var newScale=Math.max(minScale,Math.min(maxScale,pinchScale0*(dist/pinchDist0)));
+        var imgX=(pivotX-pinchTx0)/pinchScale0;
+        var imgY=(pivotY-pinchTy0)/pinchScale0;
+        scale=newScale;
+        tx=pivotX-imgX*scale + (midX-pinchMidX0);
+        ty=pivotY-imgY*scale + (midY-pinchMidY0);
+        clamp(); apply();
+        if(lbHint) lbHint.style.opacity=scale>1.05?'0':'1';
+      } else if(e.touches.length===1&&dragging){
+        var dx=e.touches[0].clientX-startX, dy=e.touches[0].clientY-startY;
+        if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+        if(scale>1.01){
+          e.preventDefault();
+          tx=startTx+dx; ty=startTy+dy;
+          clamp(); apply();
+        }
+      }
+    },{passive:false});
+
+    lbInner.addEventListener('touchend',function(){
+      dragging=false; pinching=false;
     });
   })();
 
