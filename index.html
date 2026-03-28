@@ -292,7 +292,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   margin: 4px 0 12px; padding: 12px; background: #FFF0F0;
   border: 2px solid #F5A0A0; border-radius: var(--radius);
   animation: fadeIn 0.3s ease;
-  position: sticky; left: 0; width: calc(100vw - 16px);
+  position: sticky; left: 0; width: 100%; box-sizing: border-box;
 }
 .incomplete-header {
   font-size: 1rem; font-weight: 700; color: #C0392B;
@@ -353,7 +353,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 /* 当日予定ウィジェット */
 .today-widget {
   margin: 0 0 8px; padding: 16px 8px;
-  position: sticky; left: 0; z-index: 10; width: calc(100vw - 16px);
+  position: sticky; left: 0; z-index: 10; width: 100%; box-sizing: border-box;
   background: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 50%, #FFEDD5 100%);
   border-radius: 16px; border: 1px solid #FDE68A;
   box-shadow: 0 2px 12px rgba(251,191,36,0.12);
