@@ -17,16 +17,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --color0: #7CB9E8;
+  --color0: #6BAF7A;
   --color1: #E74C3C;
   --color2: #E67E22;
-  --color0-bg: #EAF4FC;
+  --color0-bg: #EAF5EC;
   --color1-bg: #FDE8E8;
   --color2-bg: #FFF3E0;
   --color3: #DC2626;
   --color3-bg: #FEE2E2;
   --sunday: #E53E3E;
-  --saturday: #3B82F6;
+  --saturday: #4A9E6B;
   --holiday: #E53E3E;
   --today-border: #E8A0BF;
   --today-bg: #FFF5F9;
@@ -242,7 +242,7 @@ body {
 
 .selected-dates-summary { margin-top: 8px; padding: 8px; background: var(--bg); border-radius: var(--radius); font-size: 0.8rem; color: var(--text-light); max-height: 80px; overflow-y: auto; }
 .selected-dates-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.date-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: var(--color0-bg); border-radius: 12px; font-size: 0.75rem; color: var(--text); }
+.date-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: #E8F5E9; border-radius: 12px; font-size: 0.75rem; color: var(--text); }
 .date-chip button { background: none; border: none; cursor: pointer; color: var(--text-light); font-size: 0.8rem; padding: 0; line-height: 1; }
 .date-chip button:hover { color: var(--sunday); }
 
@@ -344,10 +344,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
   background: white; color: var(--text); user-select: none;
 }
-.tag-label:hover { border-color: #E8A0BF; background: #FFF5F9; }
-.tag-label input[type="checkbox"] { accent-color: #D4789C; margin: 0; width: 14px; height: 14px; }
-.tag-label.checked { background: #FFF0F5; border-color: #E8A0BF; color: #8B3A62; font-weight: 600; }
-.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #D4789C, #C0547E); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(212,120,156,0.35); letter-spacing: 0.5px; }
+.tag-label:hover { border-color: #81C784; background: #F1F8E9; }
+.tag-label input[type="checkbox"] { accent-color: #4CAF50; margin: 0; width: 14px; height: 14px; }
+.tag-label.checked { background: #E8F5E9; border-color: #66BB6A; color: #2E7D32; font-weight: 600; }
+.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #4CAF50, #388E3C); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(76,175,80,0.35); letter-spacing: 0.5px; }
 /* 表記設定モーダル */
 .tag-setting-list { margin-top: 8px; }
 .tag-setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
@@ -365,13 +365,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   position: relative; overflow: hidden;
 }
 .today-widget::before {
-  content: '🌸'; position: absolute; top: 8px; right: 12px;
-  font-size: 1.8rem; opacity: 0.2;
+  content: ''; position: absolute; top: 10px; right: 18px;
+  width: 2px; height: 50px; background: linear-gradient(180deg, #8BC34A, #A5D6A7);
+  border-radius: 1px; opacity: 0.25;
 }
 .today-widget::after {
-  content: ''; position: absolute; bottom: -15px; left: 30px;
-  width: 50px; height: 50px; border-radius: 50%;
-  background: rgba(212,120,156,0.08);
+  content: '❀'; position: absolute; top: 12px; right: 10px;
+  font-size: 1.2rem; color: #A5D6A7; opacity: 0.3;
 }
 .widget-header {
   display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
@@ -574,8 +574,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <div class="form-group">
         <label>色</label>
         <div id="color-picker" class="color-picker">
-          <button type="button" class="color-option selected" data-color="0" style="background:#7CB9E8" title="薄い青"></button>
-          <span class="color-label">青</span>
+          <button type="button" class="color-option selected" data-color="0" style="background:#6BAF7A" title="緑"></button>
+          <span class="color-label">緑</span>
           <button type="button" class="color-option" data-color="1" style="background:#E74C3C" title="赤"></button>
           <span class="color-label">赤</span>
           <button type="button" class="color-option" data-color="2" style="background:#E67E22" title="濃いオレンジ"></button>
