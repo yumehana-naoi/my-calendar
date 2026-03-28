@@ -289,23 +289,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* 未完予定枠 */
 .incomplete-section {
-  margin: 12px 0; padding: 12px; background: #FFF8F0;
-  border: 2px solid #F0C27A; border-radius: var(--radius);
+  margin: 4px 0 12px; padding: 12px; background: #FFF0F0;
+  border: 2px solid #F5A0A0; border-radius: var(--radius);
   animation: fadeIn 0.3s ease;
+  position: sticky; left: 0; width: calc(100vw - 16px);
 }
 .incomplete-header {
-  font-size: 1rem; font-weight: 700; color: #B8860B;
+  font-size: 1rem; font-weight: 700; color: #C0392B;
   margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
 }
-.incomplete-header::before { content: '⚠'; font-size: 1.1rem; }
+.incomplete-header::before { content: '⚠'; font-size: 1.1rem; color: #E74C3C; }
 .incomplete-table { width: 100%; border-collapse: collapse; }
 .incomplete-table th {
   text-align: left; font-size: 0.75rem; color: var(--text-light);
-  padding: 4px 8px; border-bottom: 1px solid #E8D5B5;
+  padding: 4px 8px; border-bottom: 1px solid #F5C0C0;
   white-space: nowrap;
 }
 .incomplete-table td {
-  padding: 6px 8px; border-bottom: 1px solid #F0E6D6;
+  padding: 6px 8px; border-bottom: 1px solid #F5D0D0;
   font-size: 0.85rem; vertical-align: middle;
 }
 .incomplete-row { cursor: pointer; transition: background 0.15s; }
@@ -341,7 +342,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .tag-label:hover { border-color: #F59E0B; background: #FFFBEB; }
 .tag-label input[type="checkbox"] { accent-color: #F59E0B; margin: 0; width: 14px; height: 14px; }
 .tag-label.checked { background: #FEF3C7; border-color: #F59E0B; color: #B45309; font-weight: 600; }
-.widget-tag { display: inline-block; font-size: 0.65rem; font-weight: 700; color: #fff; background: #F59E0B; padding: 1px 6px; border-radius: 4px; margin-right: 3px; }
+.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #EF4444, #DC2626); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(239,68,68,0.35); letter-spacing: 0.5px; }
 /* 表記設定モーダル */
 .tag-setting-list { margin-top: 8px; }
 .tag-setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
@@ -351,8 +352,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* 当日予定ウィジェット */
 .today-widget {
-  margin: 0 0 8px; padding: 16px 20px;
-  position: sticky; left: 8px; z-index: 10;
+  margin: 0 0 8px; padding: 16px 8px;
+  position: sticky; left: 0; z-index: 10; width: calc(100vw - 16px);
   background: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 50%, #FFEDD5 100%);
   border-radius: 16px; border: 1px solid #FDE68A;
   box-shadow: 0 2px 12px rgba(251,191,36,0.12);
@@ -399,8 +400,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .widget-color-bar {
   width: 3px; height: 24px; border-radius: 2px; flex-shrink: 0;
 }
+.widget-time-text { font-size: 0.8rem; color: #6B7280; white-space: nowrap; flex-shrink: 0; }
 .widget-event-content {
-  flex: 1; min-width: 0; max-width: 25em;
+  flex: 1; min-width: 0;
 }
 .widget-event-title {
   font-size: 0.85rem; font-weight: 600; color: #1F2937;
@@ -1382,10 +1384,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const f=document.createDocumentFragment();
     // ウィジェットを退避
     if(w&&w.parentNode===c) f.appendChild(w);
+    // 未完予定枠（ウィジェットの下）
+    f.appendChild(renderIncompleteSection());
     // 当月
     f.appendChild(renderMonth(new Date(baseMonth.getFullYear(),baseMonth.getMonth(),1),true));
-    // 未完予定枠（当月と翌月の間）
-    f.appendChild(renderIncompleteSection());
     // 翌月
     f.appendChild(renderMonth(new Date(baseMonth.getFullYear(),baseMonth.getMonth()+1,1),false));
     c.innerHTML=''; c.appendChild(f);
@@ -2422,18 +2424,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       for(var i=0;i<activeEvs.length;i++){
         var ev=activeEvs[i];
         var timeStr=ev.time||'--:--';
-        var timeCls=ev.time?'widget-time-badge':'widget-time-badge no-time';
-        var barColor=colorMap[ev.colorIndex]||colorMap[0];
         var isImportant=ev.colorIndex===3;
         var rowCls=isImportant?'widget-event-row important':'widget-event-row';
-        var badge=isImportant?'<span class="widget-important-badge">重要</span>':'';
         var detailHtml=ev.detail?'<div class="widget-event-detail">'+escapeHtml(ev.detail)+'</div>':'';
         var tagsHtml='';
         if(ev.tags&&ev.tags.length>0){for(var t=0;t<ev.tags.length;t++){tagsHtml+='<span class="widget-tag">'+escapeHtml(ev.tags[t])+'</span>';}}
         html+='<div class="'+rowCls+'" data-widget-date="'+dk+'" data-widget-id="'+ev.id+'" style="cursor:pointer">'
-          +'<div class="'+timeCls+'">'+timeStr+'</div>'
-          +'<div class="widget-color-bar" style="background:'+barColor+'"></div>'
-          +badge
+          +'<span class="widget-time-text">'+timeStr+'</span> '
           +'<div class="widget-event-content">'
           +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>'
           +tagsHtml
