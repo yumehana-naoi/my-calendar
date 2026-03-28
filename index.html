@@ -120,8 +120,7 @@ body {
 .day-events { flex: 1; overflow: visible; }
 .day-event-item {
   font-size: 0.65rem; padding: 2px 4px; margin-bottom: 1px;
-  border-radius: 3px; white-space: normal;
-  overflow-wrap: break-word;
+  border-radius: 3px; white-space: nowrap;
   line-height: 1.3;
 }
 .day-event-item.color-0 { background: var(--color0-bg); border-left: 3px solid var(--color0); }
@@ -131,9 +130,6 @@ body {
   background: linear-gradient(90deg, #FEE2E2 0%, #FECACA 100%);
   border-left: 4px solid var(--color3); font-weight: 700; color: #991B1B;
   position: relative;
-}
-.day-event-item.color-3::before {
-  content: '⚠'; margin-right: 2px; font-size: 0.7rem;
 }
 
 /* 済み表示 */
@@ -334,6 +330,25 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .incomplete-table td { font-size: 0.8rem; padding: 5px 4px; }
 }
 
+/* 追加表記タグ */
+.tag-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag-label {
+  display: flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px;
+  font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+  background: white; color: var(--text); user-select: none;
+}
+.tag-label:hover { border-color: #F59E0B; background: #FFFBEB; }
+.tag-label input[type="checkbox"] { accent-color: #F59E0B; margin: 0; width: 14px; height: 14px; }
+.tag-label.checked { background: #FEF3C7; border-color: #F59E0B; color: #B45309; font-weight: 600; }
+.widget-tag { display: inline-block; font-size: 0.65rem; font-weight: 700; color: #fff; background: #F59E0B; padding: 1px 6px; border-radius: 4px; margin-right: 3px; }
+/* 表記設定モーダル */
+.tag-setting-list { margin-top: 8px; }
+.tag-setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.tag-setting-item:last-child { border-bottom: none; }
+.tag-delete-btn { background: none; border: none; color: #EF4444; cursor: pointer; font-size: 1rem; padding: 2px 6px; }
+.tag-delete-btn:hover { background: #FEE2E2; border-radius: 4px; }
+
 /* 当日予定ウィジェット */
 .today-widget {
   margin: 0 0 8px; padding: 16px 20px;
@@ -497,7 +512,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 <header id="app-header">
   <div class="site-selector-wrap">
     <select id="site-select"></select>
-    <button id="btn-site-manage" class="header-btn" title="拠点管理">⚙</button>
+    <button id="btn-site-manage" class="header-btn" title="共有カレンダー">共有カレンダー</button>
+    <button id="btn-tag-setting" class="header-btn" title="表記設定">表記設定</button>
   </div>
   <span id="doc-size-display" style="font-size:0.65rem;color:#9CA3AF;white-space:nowrap"></span>
   <div class="header-actions">
@@ -573,6 +589,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <div id="photos-preview-grid" class="photos-preview-grid"></div>
       </div>
 
+
+      <div class="form-group" id="tag-group">
+        <label>追加表記</label>
+        <div class="tag-options" id="tag-options-container"></div>
+      </div>
 
       <div class="form-group" id="recurrence-group">
         <label>繰り返し</label>
@@ -684,15 +705,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <button id="btn-close-sync" class="close-btn">✕</button>
     </div>
     <div class="sync-body">
-      <p class="sync-description">デバイス間でデータを共有するには、Firebase プロジェクトを設定してください。</p>
-      <div class="form-group"><label>API Key</label><input type="text" id="fb-apiKey" placeholder="AIza..."></div>
-      <div class="form-group"><label>Auth Domain</label><input type="text" id="fb-authDomain" placeholder="your-app.firebaseapp.com"></div>
-      <div class="form-group"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="your-project-id"></div>
-      <div class="form-group"><label>Storage Bucket（写真保存用）</label><input type="text" id="fb-storageBucket" placeholder="your-project-id.firebasestorage.app"></div>
+      <p class="sync-description">デバイス間でデータを共有するには、同じユーザーIDを設定してください。</p>
       <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
+      <input type="hidden" id="fb-apiKey"><input type="hidden" id="fb-authDomain"><input type="hidden" id="fb-projectId"><input type="hidden" id="fb-storageBucket">
       <div class="form-actions">
         <button id="btn-save-sync" class="primary-btn">保存して接続</button>
+        <button id="btn-gen-share-link" class="secondary-btn">共有リンク生成</button>
         <button id="btn-disconnect-sync" class="secondary-btn">切断</button>
+      </div>
+      <div id="share-link-output" style="display:none;margin-top:8px">
+        <input type="text" id="share-link-url" readonly style="width:100%;padding:6px;font-size:0.8rem;border:1px solid var(--border);border-radius:var(--radius)">
+        <button id="btn-copy-share-link" class="secondary-btn" style="margin-top:4px;font-size:0.8rem">コピー</button>
       </div>
       <div id="sync-status" class="sync-status"></div>
       <hr>
@@ -709,16 +732,33 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 <div id="site-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>拠点管理</h3>
+      <h3>共有カレンダー</h3>
       <button id="btn-close-site" class="close-btn">✕</button>
     </div>
     <div class="site-body">
-      <p class="sync-description">拠点を追加・削除できます。各拠点のデータは独立しています。</p>
+      <p class="sync-description">共有カレンダーを追加・削除できます。各カレンダーのデータは独立しています。</p>
       <div class="site-add-row">
-        <input type="text" id="new-site-name" placeholder="新しい拠点名を入力" maxlength="20">
+        <input type="text" id="new-site-name" placeholder="新しいカレンダー名を入力" maxlength="20">
         <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
       </div>
       <div id="site-list" class="site-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tag-setting-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>表記設定</h3>
+      <button id="btn-close-tag-setting" class="close-btn">✕</button>
+    </div>
+    <div class="site-body">
+      <p class="sync-description">ウィジェットに表示する追加表記を管理できます。</p>
+      <div class="site-add-row">
+        <input type="text" id="new-tag-name" placeholder="新しい表記を入力（例：薬準備）" maxlength="10">
+        <button id="btn-add-tag" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+      </div>
+      <div id="tag-setting-list" class="tag-setting-list"></div>
     </div>
   </div>
 </div>
@@ -1084,20 +1124,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // ===== Firebase同期 =====
   const SYNC_COMMON_KEY = 'calendar_sync_common'; // Firebase接続情報（全拠点共通）
+  // Firebase設定（アプリ埋め込み）
+  const EMBEDDED_FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyDqxOagM5y5l3nV6Vl9A1c6SNCfP-dvXvM',
+    authDomain: 'yumesato-calendar.firebaseapp.com',
+    projectId: 'yumesato-calendar',
+    storageBucket: 'yumesato-calendar.firebasestorage.app'
+  };
   function loadSyncConfig() {
     try{
-      // 拠点固有設定（userId）
       const site=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};
-      // 共通設定（apiKey, projectId等）
-      const common=JSON.parse(localStorage.getItem(SYNC_COMMON_KEY))||{};
-      // 旧形式: 拠点キーに全情報が入っている場合は共通部分を移行
-      if(site.apiKey&&!common.apiKey){
-        common.apiKey=site.apiKey; common.authDomain=site.authDomain||'';
-        common.projectId=site.projectId; common.storageBucket=site.storageBucket||'';
-        localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
-      }
+      // 埋め込み設定を優先、localStorage設定はフォールバック
+      const common=EMBEDDED_FIREBASE_CONFIG;
       const merged={...common,...site};
-      if(!merged.apiKey&&!merged.projectId&&!merged.userId) return null;
+      if(!merged.userId) return null;
       return merged;
     }catch{return null;}
   }
@@ -1934,6 +1974,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const title=document.getElementById('event-title').value.trim();
     const detail=document.getElementById('event-detail').value.trim();
     const colorIndex=getSelectedColor();
+    const tags=getSelectedTags();
     const recurrenceType=document.getElementById('recurrence-type').value;
 
     // 写真アップロード（Firebase Storage対応・複数枚）
@@ -1956,7 +1997,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex,photos:photos};
+      const updates={time,title,detail,colorIndex,photos:photos,tags:tags};
 
       if(editingEvent.groupId){
         showEditGroupConfirm(updates, newDate, restoreBtn);
@@ -1976,12 +2017,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     if(recurrenceType==='none'){
-      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos});
+      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags});
     } else {
       const result=generateRecurringDates(recurrenceType,selectedDate);
       const dates=result.dates; const recurrenceInfo=result.info;
-      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos});}
-      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos});}}
+      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags});}
+      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos,tags});}}
     }
     try{saveEvents();}catch(e){console.warn('localStorage保存エラー:',e);}
     restoreBtn(); closeModal();
@@ -2181,21 +2222,34 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-sync').addEventListener('click',()=>{
     const c=loadSyncConfig();
     if(c){
-      document.getElementById('fb-apiKey').value=c.apiKey||'';
-      document.getElementById('fb-authDomain').value=c.authDomain||'';
-      document.getElementById('fb-projectId').value=c.projectId||'';
-      document.getElementById('fb-storageBucket').value=c.storageBucket||'';
       document.getElementById('fb-userId').value=c.userId||'';
+    } else {
+      // localStorageからuserId復元
+      try{const s=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};document.getElementById('fb-userId').value=s.userId||'';}catch(e){}
     }
     document.getElementById('sync-modal').classList.remove('hidden');
   });
   document.getElementById('btn-close-sync').addEventListener('click',()=>document.getElementById('sync-modal').classList.add('hidden'));
   document.getElementById('btn-save-sync').addEventListener('click',()=>{
-    const common={apiKey:document.getElementById('fb-apiKey').value.trim(),authDomain:document.getElementById('fb-authDomain').value.trim(),projectId:document.getElementById('fb-projectId').value.trim(),storageBucket:document.getElementById('fb-storageBucket').value.trim()};
-    const site={userId:document.getElementById('fb-userId').value.trim()};
-    localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
+    const userId=document.getElementById('fb-userId').value.trim();
+    if(!userId){alert('ユーザーIDを入力してください。');return;}
+    const site={userId};
     localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
     initFirebase();
+  });
+  // 共有リンク生成
+  document.getElementById('btn-gen-share-link').addEventListener('click',()=>{
+    const userId=document.getElementById('fb-userId').value.trim();
+    if(!userId){alert('ユーザーIDを入力してください。');return;}
+    const data=btoa(unescape(encodeURIComponent(JSON.stringify({...EMBEDDED_FIREBASE_CONFIG,userId}))));
+    const url=window.location.origin+window.location.pathname+'?sync='+data;
+    document.getElementById('share-link-url').value=url;
+    document.getElementById('share-link-output').style.display='block';
+  });
+  document.getElementById('btn-copy-share-link').addEventListener('click',()=>{
+    const input=document.getElementById('share-link-url');
+    input.select();document.execCommand('copy');
+    alert('コピーしました');
   });
   document.getElementById('btn-disconnect-sync').addEventListener('click',()=>{if(firebaseUnsubscribe){firebaseUnsubscribe();firebaseUnsubscribe=null;}firebaseDb=null;firebaseStorage=null;initialLoadDone=false;localStorage.removeItem(SYNC_CONFIG_KEY);updateSyncStatus('','切断しました');updateDocSizeDisplay();updatePhotoCount();});
   document.getElementById('btn-export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(events,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`calendar-backup-${dateToKey(new Date())}.json`;a.click();URL.revokeObjectURL(url);});
@@ -2251,6 +2305,24 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   baseMonth=new Date();
   renderAllMonths();
   renderTodayWidget();
+  // URLから同期設定を自動適用
+  (function(){
+    try{
+      var params=new URLSearchParams(window.location.search);
+      var syncData=params.get('sync');
+      if(syncData){
+        var cfg=JSON.parse(decodeURIComponent(escape(atob(syncData))));
+        if(cfg.apiKey&&cfg.projectId&&cfg.userId){
+          var common={apiKey:cfg.apiKey,authDomain:cfg.authDomain||'',projectId:cfg.projectId,storageBucket:cfg.storageBucket||''};
+          var site={userId:cfg.userId};
+          localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
+          localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
+          // URLパラメータを消す（再読み込み時に再適用されないように）
+          window.history.replaceState({},'',window.location.pathname);
+        }
+      }
+    }catch(e){console.warn('URL同期パラメータ読み取り失敗:',e);}
+  })();
   initFirebase();
 
 
@@ -2263,6 +2335,73 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(elapsed>30000){ window.location.reload(); }
     }
   });
+
+  // ===== 追加表記タグ管理 =====
+  var TAG_STORAGE_KEY=SITE_PREFIX+'calendar_tags';
+  function getTagList(){
+    try{var s=localStorage.getItem(TAG_STORAGE_KEY);return s?JSON.parse(s):['薬準備','欠食'];}catch(e){return['薬準備','欠食'];}
+  }
+  function saveTagList(list){localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(list));}
+  function renderTagOptions(){
+    var c=document.getElementById('tag-options-container');if(!c)return;
+    var tags=getTagList();
+    c.innerHTML='';
+    for(var i=0;i<tags.length;i++){
+      var lbl=document.createElement('label');lbl.className='tag-label';
+      var cb=document.createElement('input');cb.type='checkbox';cb.name='event-tag';cb.value=tags[i];
+      lbl.appendChild(cb);lbl.appendChild(document.createTextNode(' '+tags[i]));
+      cb.addEventListener('change',function(){this.closest('.tag-label').classList.toggle('checked',this.checked);});
+      c.appendChild(lbl);
+    }
+  }
+  function getSelectedTags(){
+    var vals=[];
+    document.querySelectorAll('#tag-options-container input[name="event-tag"]:checked').forEach(function(cb){vals.push(cb.value);});
+    return vals;
+  }
+  function setTagCheckboxes(arr){
+    document.querySelectorAll('#tag-options-container input[name="event-tag"]').forEach(function(cb){
+      cb.checked=(arr||[]).indexOf(cb.value)!==-1;
+      cb.closest('.tag-label').classList.toggle('checked',cb.checked);
+    });
+  }
+  renderTagOptions();
+  // openAddModal / openEditModal にタグ連動
+  var _origOpenAdd=openAddModal;
+  openAddModal=function(){ _origOpenAdd(); renderTagOptions(); setTagCheckboxes([]); };
+  var _origOpenEdit=openEditModal;
+  openEditModal=function(ev){ _origOpenEdit(ev); renderTagOptions(); setTagCheckboxes(ev.tags||[]); };
+
+  // 表記設定モーダル
+  (function(){
+    var modal=document.getElementById('tag-setting-modal');
+    var btnOpen=document.getElementById('btn-tag-setting');
+    var btnClose=document.getElementById('btn-close-tag-setting');
+    var btnAdd=document.getElementById('btn-add-tag');
+    var input=document.getElementById('new-tag-name');
+    var listEl=document.getElementById('tag-setting-list');
+    function renderList(){
+      var tags=getTagList();listEl.innerHTML='';
+      for(var i=0;i<tags.length;i++){
+        var div=document.createElement('div');div.className='tag-setting-item';
+        var span=document.createElement('span');span.textContent=tags[i];
+        var btn=document.createElement('button');btn.className='tag-delete-btn';btn.textContent='✕';btn.dataset.idx=i;
+        btn.addEventListener('click',function(){
+          var t=getTagList();t.splice(parseInt(this.dataset.idx),1);saveTagList(t);renderList();renderTagOptions();
+        });
+        div.appendChild(span);div.appendChild(btn);listEl.appendChild(div);
+      }
+    }
+    btnOpen.addEventListener('click',function(){modal.classList.remove('hidden');renderList();});
+    btnClose.addEventListener('click',function(){modal.classList.add('hidden');});
+    modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.add('hidden');});
+    btnAdd.addEventListener('click',function(){
+      var name=input.value.trim();if(!name)return;
+      var tags=getTagList();
+      if(tags.indexOf(name)!==-1){alert('同じ表記が既に存在します。');return;}
+      tags.push(name);saveTagList(tags);input.value='';renderList();renderTagOptions();
+    });
+  })();
 
   // ===== 当日予定ウィジェット =====
   function renderTodayWidget(){
@@ -2289,12 +2428,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         var rowCls=isImportant?'widget-event-row important':'widget-event-row';
         var badge=isImportant?'<span class="widget-important-badge">重要</span>':'';
         var detailHtml=ev.detail?'<div class="widget-event-detail">'+escapeHtml(ev.detail)+'</div>':'';
-        html+='<div class="'+rowCls+'">'
+        var tagsHtml='';
+        if(ev.tags&&ev.tags.length>0){for(var t=0;t<ev.tags.length;t++){tagsHtml+='<span class="widget-tag">'+escapeHtml(ev.tags[t])+'</span>';}}
+        html+='<div class="'+rowCls+'" data-widget-date="'+dk+'" data-widget-id="'+ev.id+'" style="cursor:pointer">'
           +'<div class="'+timeCls+'">'+timeStr+'</div>'
           +'<div class="widget-color-bar" style="background:'+barColor+'"></div>'
           +badge
           +'<div class="widget-event-content">'
           +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>'
+          +tagsHtml
           +detailHtml
           +'</div>'
           +'</div>';
@@ -2302,6 +2444,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
     html+='</div>';
     w.innerHTML=html;
+    // ウィジェット行クリック → 詳細パネル表示
+    w.querySelectorAll('.widget-event-row[data-widget-date]').forEach(function(row){
+      row.addEventListener('click',function(){
+        var dk=this.dataset.widgetDate;
+        if(dk){selectedDate=dk;incompleteMode=false;renderDetailPanel(dk);
+          var dp=document.getElementById('detail-panel');if(dp)dp.classList.remove('hidden');
+        }
+      });
+    });
   }
 
   // iPadのbfcache復帰時にボタン状態をリセット
