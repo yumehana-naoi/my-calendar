@@ -191,7 +191,6 @@ body {
 
 .detail-no-events { text-align: center; color: #9CA3AF; padding: 40px 20px; font-size: 0.95rem; line-height: 1.6; }
 
-
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .modal.hidden { display: none; }
 .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 20px; }
@@ -252,7 +251,6 @@ body {
 .date-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: #E8F5E9; border-radius: 12px; font-size: 0.75rem; color: var(--text); }
 .date-chip button { background: none; border: none; cursor: pointer; color: var(--text-light); font-size: 0.8rem; padding: 0; line-height: 1; }
 .date-chip button:hover { color: var(--sunday); }
-
 
 .primary-btn { width: 100%; padding: 10px 20px; background: linear-gradient(135deg, #81C784, #4CAF50); color: white; border: none; border-radius: var(--radius); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; box-shadow: 0 2px 8px rgba(76,175,80,0.25); }
 .primary-btn:hover { opacity: 0.85; }
@@ -343,7 +341,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   .incomplete-table td { font-size: 0.8rem; padding: 5px 4px; }
 }
 
-/* 追加表記タグ */
+/* ウィジェット内タグ */
 .tag-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .tag-label {
   display: flex; align-items: center; gap: 4px;
@@ -351,11 +349,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
   background: white; color: var(--text); user-select: none;
 }
-.tag-label:hover { border-color: #EF5350; background: #FFF5F5; }
-.tag-label input[type="checkbox"] { accent-color: #EF4444; margin: 0; width: 14px; height: 14px; }
-.tag-label.checked { background: #FFEBEE; border-color: #EF5350; color: #C62828; font-weight: 600; }
-.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #EF4444, #DC2626); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 3px; box-shadow: 0 1px 4px rgba(239,68,68,0.35); letter-spacing: 0.5px; }
-/* 表記設定モーダル */
+.tag-label:hover { border-color: #81C784; background: #F0F8F0; }
+.tag-label input[type="checkbox"] { accent-color: #4CAF50; margin: 0; width: 14px; height: 14px; }
+.tag-label.checked { background: #E8F5E9; border-color: #81C784; color: #2E7D32; font-weight: 600; }
+.widget-tag { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #fff; background: linear-gradient(135deg, #66BB6A, #43A047); padding: 3px 10px; border-radius: 6px; margin-right: 4px; margin-top: 2px; box-shadow: 0 1px 4px rgba(76,175,80,0.35); letter-spacing: 0.5px; }
+/* タグ設定モーダル */
 .tag-setting-list { margin-top: 8px; }
 .tag-setting-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .tag-setting-item:last-child { border-bottom: none; }
@@ -379,7 +377,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* 当日予定ウィジェット */
 .today-widget {
-  margin: 0 8px 8px; padding: 16px 8px;
+  margin: 0 8px 8px; padding: 10px 8px;
   position: relative; z-index: 10; box-sizing: border-box;
   background: linear-gradient(135deg, #FFF5F5 0%, #FFE8EC 40%, #FFF0F0 100%);
   border-radius: 16px; border: 1px solid #F0C0C8;
@@ -396,7 +394,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   font-size: 1.2rem; color: #A5D6A7; opacity: 0.3;
 }
 .widget-header {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 12px;
+  display: flex; flex-direction: row; align-items: center; gap: 10px; margin-bottom: 6px;
   position: relative; z-index: 1;
 }
 .widget-header-title {
@@ -408,29 +406,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   background: rgba(255,255,255,0.7); padding: 3px 12px;
   border-radius: 12px; letter-spacing: 0.5px;
 }
-.widget-greeting {
-  font-size: 1rem; font-weight: 700; color: #2E5E3A;
-}
 .widget-events { position: relative; z-index: 1; }
 .widget-event-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; margin-bottom: 4px;
+  padding: 5px 12px; margin-bottom: 3px;
   background: rgba(255,255,255,0.75); border-radius: 10px;
   border: 1px solid #81C784;
   backdrop-filter: blur(4px); transition: background 0.15s;
 }
 .widget-event-row:hover { background: rgba(255,255,255,0.95); }
 .widget-event-row:last-child { margin-bottom: 0; }
-.widget-time-badge {
-  font-size: 0.75rem; font-weight: 700; color: white;
-  background: linear-gradient(135deg, #F59E0B, #F97316);
-  padding: 3px 8px; border-radius: 8px; min-width: 48px;
-  text-align: center; white-space: nowrap;
-}
-.widget-time-badge.no-time { background: linear-gradient(135deg, #D1D5DB, #9CA3AF); }
-.widget-color-bar {
-  width: 3px; height: 24px; border-radius: 2px; flex-shrink: 0;
-}
 .widget-time-text { font-size: 0.8rem; font-weight: 600; color: #3E6B4A; white-space: nowrap; flex-shrink: 0; }
 .widget-event-content {
   flex: 1; min-width: 0;
@@ -457,11 +442,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .widget-event-row.important .widget-event-detail {
   color: #B91C1C;
 }
-.widget-important-badge {
-  font-size: 0.65rem; font-weight: 800; color: white;
-  background: #DC2626; padding: 1px 6px; border-radius: 4px;
-  letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;
-}
 @keyframes pulseImportant {
   0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.2); }
   50% { box-shadow: 0 0 16px rgba(239,68,68,0.4); }
@@ -473,13 +453,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   text-decoration: line-through;
 }
 .widget-photos {
-  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle;
 }
-.widget-photo-thumb {
-  width: 40px; height: 40px; object-fit: cover; border-radius: 6px;
-  border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: opacity 0.15s;
+.widget-photo-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; cursor: pointer; opacity: 0.6; transition: opacity 0.15s;
 }
-.widget-photo-thumb:hover { opacity: 0.75; }
+.widget-photo-icon:hover { opacity: 1; }
 .widget-empty {
   text-align: center; padding: 8px; color: #4A7A56;
   font-size: 0.85rem; opacity: 0.7; font-style: italic;
@@ -653,9 +633,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         <div id="photos-preview-grid" class="photos-preview-grid"></div>
       </div>
 
-
       <div class="form-group" id="tag-group">
-        <label>ウィジェットへの追加表記</label>
+        <label>ウィジェット内のタグ</label>
         <div class="tag-options" id="tag-options-container"></div>
       </div>
 
@@ -769,12 +748,42 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       <button id="btn-close-settings" class="close-btn">✕</button>
     </div>
     <div class="settings-tabs">
-      <button class="settings-tab active" data-tab="tab-sync">同期</button>
-      <button class="settings-tab" data-tab="tab-site">共有カレンダー</button>
-      <button class="settings-tab" data-tab="tab-tag">表記</button>
+      <button class="settings-tab active" data-tab="tab-site">カレンダー</button>
+      <button class="settings-tab" data-tab="tab-tag">タグ</button>
+      <button class="settings-tab" data-tab="tab-display">表示</button>
+      <button class="settings-tab" data-tab="tab-sync">同期</button>
     </div>
     <div class="settings-tab-body">
-      <div id="tab-sync" class="settings-tab-pane active">
+      <div id="tab-site" class="settings-tab-pane active">
+        <p class="sync-description">カレンダーを追加・削除できます。各カレンダーのデータは独立しています。</p>
+        <div class="site-add-row">
+          <input type="text" id="new-site-name" placeholder="新しいカレンダー名を入力" maxlength="20">
+          <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+        </div>
+        <div id="site-list" class="site-list"></div>
+      </div>
+      <div id="tab-tag" class="settings-tab-pane">
+        <p class="sync-description">ウィジェット内のタグを管理できます。</p>
+        <div class="site-add-row">
+          <input type="text" id="new-tag-name" placeholder="新しいタグを入力（例：薬準備）" maxlength="10">
+          <button id="btn-add-tag" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+        </div>
+        <div id="tag-setting-list" class="tag-setting-list"></div>
+      </div>
+      <div id="tab-display" class="settings-tab-pane">
+        <p class="sync-description">各セクションの表示/非表示を切り替えます。</p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" id="chk-show-widget" checked style="width:18px;height:18px;accent-color:#4CAF50;">
+            本日の予定（ウィジェット）を表示
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" id="chk-show-incomplete" checked style="width:18px;height:18px;accent-color:#4CAF50;">
+            前日までの未完了の予定を表示
+          </label>
+        </div>
+      </div>
+      <div id="tab-sync" class="settings-tab-pane">
         <p class="sync-description">デバイス間でデータを共有するには、同じユーザーIDを設定してください。</p>
         <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
         <input type="hidden" id="fb-apiKey"><input type="hidden" id="fb-authDomain"><input type="hidden" id="fb-projectId"><input type="hidden" id="fb-storageBucket">
@@ -796,22 +805,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           <button id="btn-import" class="secondary-btn">インポート</button>
         </div>
         <input type="file" id="import-file" accept=".json" style="display:none">
-      </div>
-      <div id="tab-site" class="settings-tab-pane">
-        <p class="sync-description">共有カレンダーを追加・削除できます。各カレンダーのデータは独立しています。</p>
-        <div class="site-add-row">
-          <input type="text" id="new-site-name" placeholder="新しいカレンダー名を入力" maxlength="20">
-          <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
-        </div>
-        <div id="site-list" class="site-list"></div>
-      </div>
-      <div id="tab-tag" class="settings-tab-pane">
-        <p class="sync-description">ウィジェットに表示する追加表記を管理できます。</p>
-        <div class="site-add-row">
-          <input type="text" id="new-tag-name" placeholder="新しい表記を入力（例：薬準備）" maxlength="10">
-          <button id="btn-add-tag" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
-        </div>
-        <div id="tag-setting-list" class="tag-setting-list"></div>
       </div>
     </div>
   </div>
@@ -1022,6 +1015,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function formatDateJP(dk) { const d=new Date(dk+'T00:00:00'); return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${WEEKDAYS[d.getDay()]}）`; }
   function formatDateShort(dk) { const d=new Date(dk+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
   function escapeHtml(text) { const div=document.createElement('div'); div.textContent=text; return div.innerHTML; }
+  function getEventPhotos(ev) { return ev.photos||(ev.photo?[ev.photo]:[]); }
   function getNow() { return new Date().toISOString(); }
 
   // ===== 古い予定の自動削除 =====
@@ -1035,7 +1029,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         // 3ヶ月以上前の予定削除時、写真もStorageから確実に削除
         if(events[keys[i]]){
           for(let j=0;j<events[keys[i]].length;j++){
-            const ep=events[keys[i]][j].photos||(events[keys[i]][j].photo?[events[keys[i]][j].photo]:[]);
+            const ep=getEventPhotos(events[keys[i]][j]);
             for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);
           }
         }
@@ -1160,15 +1154,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
     localStorage.setItem(LAST_MODIFIED_KEY,now);
     if(!isSyncingFromFirebase){
-      console.log('[SYNC] saveEvents called, firebaseDb=',!!firebaseDb,'isSyncingToFirebase=',isSyncingToFirebase);
       if(firebaseDb){
         showSyncBar('☁️ 同期中...','#2563EB',false);
         // 前回の同期が完了していなくても強制的に同期実行
         isSyncingToFirebase=false;
         syncToFirebase(now);
       }
-    } else {
-      console.log('[SYNC] saveEvents skipped: isSyncingFromFirebase=true');
     }
   }
   function addEvent(dk,ev) { if(!events[dk]) events[dk]=[]; events[dk].push(ev); }
@@ -1190,7 +1181,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // ===== Firebase同期 =====
-  const SYNC_COMMON_KEY = 'calendar_sync_common'; // Firebase接続情報（全拠点共通）
   // Firebase設定（アプリ埋め込み）
   const EMBEDDED_FIREBASE_CONFIG = {
     apiKey: 'AIzaSyDqxOagM5y5l3nV6Vl9A1c6SNCfP-dvXvM',
@@ -1221,10 +1211,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         const cookieUid=getUserIdFromCookie();
         if(cookieUid){
           merged.userId=cookieUid;
-          // localStorageにも復元保存
           site.userId=cookieUid;
           localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
-          console.log('[SYNC] userId restored from cookie:',cookieUid);
         }
       }
       if(!merged.userId) return null;
@@ -1486,6 +1474,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     updateDocSizeDisplay();
     // ウィジェット更新
     if(typeof renderTodayWidget==='function') renderTodayWidget();
+    if(window.__applyDisplaySettings) window.__applyDisplaySettings();
   }
 
   function renderMonth(monthDate,showNav) {
@@ -1575,7 +1564,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
         html+='<div class="detail-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>';
         if(ev.detail){html+='<div class="detail-event-detail">'+escapeHtml(ev.detail)+'</div>';}
-        var evPhotos=ev.photos||(ev.photo?[ev.photo]:[]);
+        var evPhotos=getEventPhotos(ev);
         if(evPhotos.length>0){html+='<div class="detail-photos-wrap">';for(var pi=0;pi<evPhotos.length;pi++){html+='<img class="detail-event-photo" src="'+evPhotos[pi]+'" data-action="show-photo">';}html+='</div>';}
         html+='<div class="detail-event-actions">'
           +'<button class="done-btn" data-id="'+ev.id+'" data-action="toggle-done">✅ 済</button>'
@@ -1613,7 +1602,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
       html+=`<div class="detail-event-title">${escapeHtml(ev.title||'（無題）')}</div>`;
       if(ev.detail){html+=`<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;}
-      const evPhotos=ev.photos||(ev.photo?[ev.photo]:[]);
+      const evPhotos=getEventPhotos(ev);
       if(evPhotos.length>0){html+='<div class="detail-photos-wrap">';for(let pi=0;pi<evPhotos.length;pi++){html+=`<img class="detail-event-photo" src="${evPhotos[pi]}" data-action="show-photo">`;}html+='</div>';}
       // ボタン
       const doneLabel=ev.done?'↩ 戻す':'✅ 済';
@@ -1739,7 +1728,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    photosData=ev.photos?ev.photos.slice():ev.photo?[ev.photo]:[]; renderPhotoPreviews(); updatePhotoCount();
+    photosData=getEventPhotos(ev).slice(); renderPhotoPreviews(); updatePhotoCount();
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1887,6 +1876,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
       showLbPhoto(lbPhotos[lbIndex]);
     }
+    // 親スコープ（ウィジェット等）からアクセス可能にする
+    window.__openLightbox=openLightbox;
 
     lbPrev.addEventListener('click',function(e){ e.stopPropagation(); if(lbIndex>0){lbIndex--;showLbPhoto(lbPhotos[lbIndex]);} });
     lbNext.addEventListener('click',function(e){ e.stopPropagation(); if(lbIndex<lbPhotos.length-1){lbIndex++;showLbPhoto(lbPhotos[lbIndex]);} });
@@ -2222,7 +2213,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         extended=true;
       }
     }
-    if(extended){ localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); console.log('繰り返し予定を自動延長しました'); }
+    if(extended){ localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); }
   }
 
   // ===== 繰り返し日付生成 =====
@@ -2270,7 +2261,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     onSingleClick = null;
     onOkClick = function(){
       const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
-      if(ev){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
+      if(ev){const ep=getEventPhotos(ev);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
       deleteEvent(selectedDate, eventId); saveEvents();
       refreshDetailPanel(); renderAllMonths();
     };
@@ -2286,13 +2277,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.style.background = '#DC2626';
     onSingleClick = function(){
       const ev=(events[selectedDate]||[]).find(x=>x.id===eventId);
-      if(ev){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
+      if(ev){const ep=getEventPhotos(ev);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}
       deleteEvent(selectedDate, eventId); saveEvents();
       refreshDetailPanel(); renderAllMonths();
     };
     onOkClick = function(){
       const keys=Object.keys(events);
-      for(let i=0;i<keys.length;i++){if(events[keys[i]]){for(let j=0;j<events[keys[i]].length;j++){const ev=events[keys[i]][j];if(ev.groupId===groupId){const ep=ev.photos||(ev.photo?[ev.photo]:[]);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}}}}
+      for(let i=0;i<keys.length;i++){if(events[keys[i]]){for(let j=0;j<events[keys[i]].length;j++){const ev=events[keys[i]][j];if(ev.groupId===groupId){const ep=getEventPhotos(ev);for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);}}}}
       deleteEventsByGroupId(groupId); saveEvents();
       refreshDetailPanel(); renderAllMonths();
     };
@@ -2328,7 +2319,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           if(events[keys[i]]){
             for(let j=0;j<events[keys[i]].length;j++){
               if(events[keys[i]][j].groupId===gid){
-                const oldP=events[keys[i]][j].photos||(events[keys[i]][j].photo?[events[keys[i]][j].photo]:[]);
+                const oldP=getEventPhotos(events[keys[i]][j]);
                 const newP=updates.photos||[];
                 for(let pi=0;pi<oldP.length;pi++){if(newP.indexOf(oldP[pi])===-1) deletePhoto(oldP[pi]);}
                 Object.assign(events[keys[i]][j],updates);
@@ -2372,6 +2363,33 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     });
     document.getElementById('btn-close-settings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
     settingsModal.addEventListener('click',function(e){if(e.target===settingsModal)settingsModal.classList.add('hidden');});
+
+    // 表示設定
+    var DISPLAY_KEY=STORAGE_KEY+'_display_settings';
+    function loadDisplaySettings(){
+      try{return JSON.parse(localStorage.getItem(DISPLAY_KEY))||{};}catch(e){return {};}
+    }
+    function saveDisplaySettings(s){localStorage.setItem(DISPLAY_KEY,JSON.stringify(s));}
+    var ds=loadDisplaySettings();
+    var chkWidget=document.getElementById('chk-show-widget');
+    var chkInc=document.getElementById('chk-show-incomplete');
+    chkWidget.checked=ds.showWidget!==false;
+    chkInc.checked=ds.showIncomplete!==false;
+    function applyDisplaySettings(){
+      var w=document.getElementById('today-widget');
+      var inc=document.querySelector('.incomplete-section');
+      if(w) w.style.display=chkWidget.checked?'':'none';
+      if(inc) inc.style.display=chkInc.checked?'':'none';
+    }
+    applyDisplaySettings();
+    chkWidget.addEventListener('change',function(){
+      var s=loadDisplaySettings();s.showWidget=chkWidget.checked;saveDisplaySettings(s);applyDisplaySettings();
+    });
+    chkInc.addEventListener('change',function(){
+      var s=loadDisplaySettings();s.showIncomplete=chkInc.checked;saveDisplaySettings(s);applyDisplaySettings();
+    });
+    // renderAllMonths後にも適用
+    window.__applyDisplaySettings=applyDisplaySettings;
   })();
   document.getElementById('btn-save-sync').addEventListener('click',()=>{
     const userId=document.getElementById('fb-userId').value.trim();
@@ -2422,7 +2440,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       localStorage.removeItem('calendar_events');
       localStorage.removeItem('calendar_last_modified');
       localStorage.removeItem('calendar_last_cleanup');
-      console.log('重複データ(calendar_events)を削除しました: '+Math.round(oldData.length*2/1024)+'KB節約');
     } else if(siteData) {
       // 異なるデータ: マージして旧データ削除
       try{
@@ -2437,7 +2454,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         localStorage.removeItem('calendar_events');
         localStorage.removeItem('calendar_last_modified');
         localStorage.removeItem('calendar_last_cleanup');
-        console.log('旧データをマージして削除しました');
       }catch(e){console.warn('旧データマージ失敗:',e);}
     }
   })();
@@ -2456,9 +2472,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(syncData){
         var cfg=JSON.parse(decodeURIComponent(escape(atob(syncData))));
         if(cfg.apiKey&&cfg.projectId&&cfg.userId){
-          var common={apiKey:cfg.apiKey,authDomain:cfg.authDomain||'',projectId:cfg.projectId,storageBucket:cfg.storageBucket||''};
           var site={userId:cfg.userId};
-          localStorage.setItem(SYNC_COMMON_KEY,JSON.stringify(common));
           localStorage.setItem(SYNC_CONFIG_KEY,JSON.stringify(site));
           saveUserIdCookie(cfg.userId);
           // URLパラメータを消す（再読み込み時に再適用されないように）
@@ -2480,7 +2494,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
   });
 
-  // ===== 追加表記タグ管理 =====
+  // ===== ウィジェット内タグ管理 =====
   var TAG_STORAGE_KEY=SITE_PREFIX+'calendar_tags';
   function getTagList(){
     try{var s=localStorage.getItem(TAG_STORAGE_KEY);return s?JSON.parse(s):['薬準備','欠食'];}catch(e){return['薬準備','欠食'];}
@@ -2516,7 +2530,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   var _origOpenEdit=openEditModal;
   openEditModal=function(ev){ _origOpenEdit(ev); renderTagOptions(); setTagCheckboxes(ev.tags||[]); };
 
-  // 表記設定（設定モーダル内タブ）
+  // タグ設定（設定モーダル内タブ）
   (function(){
     var btnAdd=document.getElementById('btn-add-tag');
     var input=document.getElementById('new-tag-name');
@@ -2533,13 +2547,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         div.appendChild(span);div.appendChild(btn);listEl.appendChild(div);
       }
     };
-    // 表記タブ選択時にリスト更新
+    // タグタブ選択時にリスト更新
     var tabBtn=document.querySelector('.settings-tab[data-tab="tab-tag"]');
     if(tabBtn) tabBtn.addEventListener('click',function(){window.__renderTagSettingList();});
     btnAdd.addEventListener('click',function(){
       var name=input.value.trim();if(!name)return;
       var tags=getTagList();
-      if(tags.indexOf(name)!==-1){alert('同じ表記が既に存在します。');return;}
+      if(tags.indexOf(name)!==-1){alert('同じタグが既に存在します。');return;}
       tags.push(name);saveTagList(tags);input.value='';window.__renderTagSettingList();renderTagOptions();
     });
   })();
@@ -2572,32 +2586,32 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         var tagsHtml='';
         if(ev.tags&&ev.tags.length>0){for(var t=0;t<ev.tags.length;t++){tagsHtml+='<span class="widget-tag">'+escapeHtml(ev.tags[t])+'</span>';}}
         var photosHtml='';
-        var evPhotos=ev.photos||(ev.photo?[ev.photo]:[]);
+        var evPhotos=getEventPhotos(ev);
         if(evPhotos.length>0){
-          photosHtml+='<div class="widget-photos">';
-          for(var p=0;p<evPhotos.length;p++){photosHtml+='<img class="widget-photo-thumb" src="'+evPhotos[p]+'" data-action="show-photo">';}
-          photosHtml+='</div>';
+          photosHtml='<span class="widget-photos" data-photos="'+evPhotos.map(function(u){return encodeURIComponent(u);}).join(',')+'">';
+          photosHtml+='<span class="widget-photo-icon" data-action="show-photo">📎'+( evPhotos.length>1?' '+evPhotos.length:'')+'</span>';
+          photosHtml+='</span>';
         }
         html+='<div class="'+rowCls+'" data-widget-date="'+dk+'" data-widget-id="'+ev.id+'" style="cursor:pointer">'
           +'<span class="widget-time-text">'+timeStr+'</span> '
           +'<div class="widget-event-content">'
-          +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>'
+          +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+photosHtml+'</div>'
           +tagsHtml
           +detailHtml
-          +photosHtml
           +'</div>'
           +'</div>';
       }
     }
     html+='</div>';
     w.innerHTML=html;
-    // ウィジェット写真クリック → ライトボックス表示（行クリックを阻止）
-    w.querySelectorAll('.widget-photo-thumb[data-action="show-photo"]').forEach(function(img){
-      img.addEventListener('click',function(e){
+    // ウィジェット写真アイコンクリック → ライトボックス表示（行クリックを阻止）
+    w.querySelectorAll('.widget-photo-icon[data-action="show-photo"]').forEach(function(icon){
+      icon.addEventListener('click',function(e){
         e.stopPropagation();
         var wrap=this.closest('.widget-photos');
-        var siblings=wrap?Array.from(wrap.querySelectorAll('[data-action="show-photo"]')).map(function(i){return i.src;}):[];
-        if(typeof openLightbox==='function') openLightbox(this.src, siblings);
+        var raw=wrap?wrap.dataset.photos:'';
+        var photos=raw?raw.split(',').map(function(u){return decodeURIComponent(u);}):[];
+        if(photos.length>0 && window.__openLightbox) window.__openLightbox(photos[0], photos);
       });
     });
     // ウィジェット行クリック → 詳細パネル表示
@@ -2638,9 +2652,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   var newSiteInput = document.getElementById('new-site-name');
   var siteListEl = document.getElementById('site-list');
 
-  // Update title (no-op, site name shown in selector)
-  function updateTitle() {}
-
   // Populate site selector dropdown
   function populateSiteSelect() {
     var sites = getSiteList();
@@ -2668,7 +2679,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
   });
 
-  // 共有カレンダータブ選択時にリスト更新
+  // カレンダータブ選択時にリスト更新
   var siteTabBtn = document.querySelector('.settings-tab[data-tab="tab-site"]');
   if (siteTabBtn) siteTabBtn.addEventListener('click', function() { renderSiteList(); });
 
@@ -2856,7 +2867,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // Initialize
   populateSiteSelect();
-  updateTitle();
 })();
 </script>
 <script>
