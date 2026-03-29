@@ -362,6 +362,21 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .tag-delete-btn { background: none; border: none; color: #E53935; cursor: pointer; font-size: 1rem; padding: 2px 6px; }
 .tag-delete-btn:hover { background: #FFEBEE; border-radius: 4px; }
 
+/* 設定モーダル タブ */
+.settings-tabs {
+  display: flex; border-bottom: 2px solid var(--border); padding: 0 20px;
+}
+.settings-tab {
+  padding: 10px 16px; border: none; background: none; cursor: pointer;
+  font-size: 0.85rem; font-weight: 600; color: var(--text-light);
+  border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+}
+.settings-tab:hover { color: var(--text); }
+.settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.settings-tab-body { padding: 16px 20px; }
+.settings-tab-pane { display: none; }
+.settings-tab-pane.active { display: block; }
+
 /* 当日予定ウィジェット */
 .today-widget {
   margin: 0 8px 8px; padding: 16px 8px;
@@ -457,6 +472,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .widget-event-row.widget-done .widget-event-title {
   text-decoration: line-through;
 }
+.widget-photos {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+.widget-photo-thumb {
+  width: 40px; height: 40px; object-fit: cover; border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: opacity 0.15s;
+}
+.widget-photo-thumb:hover { opacity: 0.75; }
 .widget-empty {
   text-align: center; padding: 8px; color: #4A7A56;
   font-size: 0.85rem; opacity: 0.7; font-style: italic;
@@ -529,6 +552,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .lightbox-zoom-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); transition: background 0.15s; }
 .lightbox-zoom-btn:hover { background: rgba(255,255,255,0.4); }
 .lightbox-zoom-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.75rem; pointer-events: none; transition: opacity 0.3s; }
+.lightbox-nav-btn {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 420;
+  width: 48px; height: 48px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.2); color: white; font-size: 1.3rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); transition: background 0.15s;
+}
+.lightbox-nav-btn:hover { background: rgba(255,255,255,0.4); }
+.lightbox-nav-btn.hidden { display: none; }
+.lightbox-nav-prev { left: 12px; }
+.lightbox-nav-next { right: 12px; }
+.lightbox-counter {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 420;
+  color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 600;
+  background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 12px;
+}
+.lightbox-counter.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -536,13 +576,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 <header id="app-header">
   <div class="site-selector-wrap">
     <select id="site-select"></select>
-    <button id="btn-site-manage" class="header-btn" title="共有カレンダー">共有カレンダー</button>
-    <button id="btn-tag-setting" class="header-btn" title="表記設定">表記設定</button>
   </div>
-  <span id="doc-size-display" style="font-size:0.65rem;color:#9CA3AF;white-space:nowrap"></span>
   <div class="header-actions">
     <button id="btn-refresh" class="header-btn" title="最新データに更新">🔄</button>
-    <button id="btn-sync" class="header-btn" title="同期設定">☁️</button>
+    <button id="btn-open-settings" class="header-btn" title="設定">⚙️ 設定</button>
   </div>
 </header>
 <div id="sync-bar" style="display:none;text-align:center;padding:4px 8px;font-size:0.8rem;font-weight:bold;transition:all 0.3s;"></div>
@@ -725,73 +762,66 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </div>
 </div>
 
-<div id="sync-modal" class="modal hidden">
+<div id="settings-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>デバイス間同期設定</h3>
-      <button id="btn-close-sync" class="close-btn">✕</button>
+      <h3>設定</h3>
+      <button id="btn-close-settings" class="close-btn">✕</button>
     </div>
-    <div class="sync-body">
-      <p class="sync-description">デバイス間でデータを共有するには、同じユーザーIDを設定してください。</p>
-      <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
-      <input type="hidden" id="fb-apiKey"><input type="hidden" id="fb-authDomain"><input type="hidden" id="fb-projectId"><input type="hidden" id="fb-storageBucket">
-      <div class="form-actions">
-        <button id="btn-save-sync" class="primary-btn">保存して接続</button>
-        <button id="btn-gen-share-link" class="secondary-btn">共有リンク生成</button>
-        <button id="btn-disconnect-sync" class="secondary-btn">切断</button>
-      </div>
-      <div id="share-link-output" style="display:none;margin-top:8px">
-        <input type="text" id="share-link-url" readonly style="width:100%;padding:6px;font-size:0.8rem;border:1px solid var(--border);border-radius:var(--radius)">
-        <button id="btn-copy-share-link" class="secondary-btn" style="margin-top:4px;font-size:0.8rem">コピー</button>
-      </div>
-      <div id="sync-status" class="sync-status"></div>
-      <hr>
-      <p class="sync-description">Firebaseが使えない場合は、エクスポート/インポートで共有できます。</p>
-      <div class="form-actions">
-        <button id="btn-export" class="secondary-btn">エクスポート</button>
-        <button id="btn-import" class="secondary-btn">インポート</button>
-      </div>
-      <input type="file" id="import-file" accept=".json" style="display:none">
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="tab-sync">同期</button>
+      <button class="settings-tab" data-tab="tab-site">共有カレンダー</button>
+      <button class="settings-tab" data-tab="tab-tag">表記</button>
     </div>
-  </div>
-</div>
-
-<div id="site-modal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>共有カレンダー</h3>
-      <button id="btn-close-site" class="close-btn">✕</button>
-    </div>
-    <div class="site-body">
-      <p class="sync-description">共有カレンダーを追加・削除できます。各カレンダーのデータは独立しています。</p>
-      <div class="site-add-row">
-        <input type="text" id="new-site-name" placeholder="新しいカレンダー名を入力" maxlength="20">
-        <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+    <div class="settings-tab-body">
+      <div id="tab-sync" class="settings-tab-pane active">
+        <p class="sync-description">デバイス間でデータを共有するには、同じユーザーIDを設定してください。</p>
+        <div class="form-group"><label>ユーザーID（共有キー）</label><input type="text" id="fb-userId" placeholder="共有するデバイスで同じIDを設定"></div>
+        <input type="hidden" id="fb-apiKey"><input type="hidden" id="fb-authDomain"><input type="hidden" id="fb-projectId"><input type="hidden" id="fb-storageBucket">
+        <div class="form-actions">
+          <button id="btn-save-sync" class="primary-btn">保存して接続</button>
+          <button id="btn-gen-share-link" class="secondary-btn">共有リンク生成</button>
+          <button id="btn-disconnect-sync" class="secondary-btn">切断</button>
+        </div>
+        <div id="share-link-output" style="display:none;margin-top:8px">
+          <input type="text" id="share-link-url" readonly style="width:100%;padding:6px;font-size:0.8rem;border:1px solid var(--border);border-radius:var(--radius)">
+          <button id="btn-copy-share-link" class="secondary-btn" style="margin-top:4px;font-size:0.8rem">コピー</button>
+        </div>
+        <div id="sync-status" class="sync-status"></div>
+        <div id="doc-size-in-settings" style="margin-top:8px;font-size:0.8rem;color:#6B7280"></div>
+        <hr>
+        <p class="sync-description">Firebaseが使えない場合は、エクスポート/インポートで共有できます。</p>
+        <div class="form-actions">
+          <button id="btn-export" class="secondary-btn">エクスポート</button>
+          <button id="btn-import" class="secondary-btn">インポート</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none">
       </div>
-      <div id="site-list" class="site-list"></div>
-    </div>
-  </div>
-</div>
-
-<div id="tag-setting-modal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>表記設定</h3>
-      <button id="btn-close-tag-setting" class="close-btn">✕</button>
-    </div>
-    <div class="site-body">
-      <p class="sync-description">ウィジェットに表示する追加表記を管理できます。</p>
-      <div class="site-add-row">
-        <input type="text" id="new-tag-name" placeholder="新しい表記を入力（例：薬準備）" maxlength="10">
-        <button id="btn-add-tag" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+      <div id="tab-site" class="settings-tab-pane">
+        <p class="sync-description">共有カレンダーを追加・削除できます。各カレンダーのデータは独立しています。</p>
+        <div class="site-add-row">
+          <input type="text" id="new-site-name" placeholder="新しいカレンダー名を入力" maxlength="20">
+          <button id="btn-add-site" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+        </div>
+        <div id="site-list" class="site-list"></div>
       </div>
-      <div id="tag-setting-list" class="tag-setting-list"></div>
+      <div id="tab-tag" class="settings-tab-pane">
+        <p class="sync-description">ウィジェットに表示する追加表記を管理できます。</p>
+        <div class="site-add-row">
+          <input type="text" id="new-tag-name" placeholder="新しい表記を入力（例：薬準備）" maxlength="10">
+          <button id="btn-add-tag" class="primary-btn" style="width:auto;padding:8px 16px">追加</button>
+        </div>
+        <div id="tag-setting-list" class="tag-setting-list"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <div id="photo-lightbox" class="modal hidden">
   <button class="lightbox-close-btn" id="lightbox-close">✕</button>
+  <button class="lightbox-nav-btn lightbox-nav-prev" id="lightbox-prev">◀</button>
+  <button class="lightbox-nav-btn lightbox-nav-next" id="lightbox-next">▶</button>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
   <div class="lightbox-zoom-controls">
     <button class="lightbox-zoom-btn" id="lightbox-zoom-out">−</button>
     <button class="lightbox-zoom-btn" id="lightbox-zoom-in">＋</button>
@@ -1063,14 +1093,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     } catch{ return 0; }
   }
   function updateDocSizeDisplay() {
-    const el=document.getElementById('doc-size-display');
+    const el=document.getElementById('doc-size-in-settings');
     if(!el) return;
     if(!firebaseDb){ el.textContent=''; return; }
     const kb=estimateDocSizeKB();
     if(kb>=1024){
-      el.textContent=(kb/1024).toFixed(1)+'MB/1MB';
+      el.textContent='データ容量: '+(kb/1024).toFixed(1)+'MB / 1MB';
     } else {
-      el.textContent=Math.round(kb)+'KB/1MB';
+      el.textContent='データ容量: '+Math.round(kb)+'KB / 1MB';
     }
     if(kb>=900) el.style.color='#DC2626';
     else if(kb>=700) el.style.color='#F59E0B';
@@ -1820,19 +1850,46 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(lbHint) lbHint.style.opacity='1';
     }
 
-    function openLightbox(src){
-      lb.classList.remove('hidden');
-      // onloadをsrcより先にセット（同期読込対策）
+    var lbPhotos=[], lbIndex=0;
+    var lbPrev=document.getElementById('lightbox-prev');
+    var lbNext=document.getElementById('lightbox-next');
+    var lbCounter=document.getElementById('lightbox-counter');
+
+    function updateLbNav(){
+      if(lbPhotos.length<=1){
+        lbPrev.classList.add('hidden'); lbNext.classList.add('hidden'); lbCounter.classList.add('hidden');
+      } else {
+        lbPrev.classList.toggle('hidden',lbIndex<=0);
+        lbNext.classList.toggle('hidden',lbIndex>=lbPhotos.length-1);
+        lbCounter.classList.remove('hidden');
+        lbCounter.textContent=(lbIndex+1)+' / '+lbPhotos.length;
+      }
+    }
+
+    function showLbPhoto(src){
       lbImg.onload=function(){
-        // requestAnimationFrameでレイアウト確定を待つ
         requestAnimationFrame(function(){ requestAnimationFrame(function(){ initFit(); }); });
       };
       lbImg.src=src;
-      // キャッシュ済み画像対応
       if(lbImg.complete&&lbImg.naturalWidth>0){
         requestAnimationFrame(function(){ requestAnimationFrame(function(){ initFit(); }); });
       }
+      updateLbNav();
     }
+
+    function openLightbox(src, photoArray){
+      lb.classList.remove('hidden');
+      if(photoArray&&photoArray.length>0){
+        lbPhotos=photoArray;
+        lbIndex=Math.max(0,photoArray.indexOf(src));
+      } else {
+        lbPhotos=[src]; lbIndex=0;
+      }
+      showLbPhoto(lbPhotos[lbIndex]);
+    }
+
+    lbPrev.addEventListener('click',function(e){ e.stopPropagation(); if(lbIndex>0){lbIndex--;showLbPhoto(lbPhotos[lbIndex]);} });
+    lbNext.addEventListener('click',function(e){ e.stopPropagation(); if(lbIndex<lbPhotos.length-1){lbIndex++;showLbPhoto(lbPhotos[lbIndex]);} });
 
     // ウィンドウリサイズ時に再計算
     window.addEventListener('resize',function(){
@@ -1843,10 +1900,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       scale=1; tx=0; ty=0;
     }
 
-    // --- 写真クリックで開く ---
+    // --- 写真クリックで開く（同じ予定の全写真を渡す）---
     document.getElementById('detail-events-list').addEventListener('click',function(e){
       var p=e.target.closest('[data-action="show-photo"]');
-      if(p){ openLightbox(p.src); }
+      if(p){
+        var wrap=p.closest('.detail-photos-wrap');
+        var siblings=wrap?Array.from(wrap.querySelectorAll('[data-action="show-photo"]')).map(function(img){return img.src;}):[];
+        openLightbox(p.src, siblings);
+      }
     });
 
     // --- 閉じる：✕ボタンのみ + Escキー ---
@@ -2283,18 +2344,35 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     confirmDialog.classList.remove('hidden');
   }
 
-  // ===== 同期設定 =====
-  document.getElementById('btn-sync').addEventListener('click',()=>{
-    const c=loadSyncConfig();
-    if(c){
-      document.getElementById('fb-userId').value=c.userId||'';
-    } else {
-      // localStorageからuserId復元
-      try{const s=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};document.getElementById('fb-userId').value=s.userId||'';}catch(e){}
-    }
-    document.getElementById('sync-modal').classList.remove('hidden');
-  });
-  document.getElementById('btn-close-sync').addEventListener('click',()=>document.getElementById('sync-modal').classList.add('hidden'));
+  // ===== 設定モーダル =====
+  (function(){
+    var settingsModal=document.getElementById('settings-modal');
+    var tabs=settingsModal.querySelectorAll('.settings-tab');
+    var panes=settingsModal.querySelectorAll('.settings-tab-pane');
+    tabs.forEach(function(tab){
+      tab.addEventListener('click',function(){
+        tabs.forEach(function(t){t.classList.remove('active');});
+        panes.forEach(function(p){p.classList.remove('active');});
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+    document.getElementById('btn-open-settings').addEventListener('click',function(){
+      // 同期タブのuserId復元
+      var c=loadSyncConfig();
+      if(c){document.getElementById('fb-userId').value=c.userId||'';}
+      else{try{var s=JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY))||{};document.getElementById('fb-userId').value=s.userId||'';}catch(e){}}
+      // 容量表示を設定内に更新
+      var sizeEl=document.getElementById('doc-size-in-settings');
+      if(sizeEl){
+        if(!firebaseDb){sizeEl.textContent='';}
+        else{var kb=estimateDocSizeKB();sizeEl.textContent='データ容量: '+(kb>=1024?(kb/1024).toFixed(1)+'MB':Math.round(kb)+'KB')+' / 1MB';sizeEl.style.color=kb>=900?'#DC2626':kb>=700?'#F59E0B':'#6B7280';}
+      }
+      settingsModal.classList.remove('hidden');
+    });
+    document.getElementById('btn-close-settings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
+    settingsModal.addEventListener('click',function(e){if(e.target===settingsModal)settingsModal.classList.add('hidden');});
+  })();
   document.getElementById('btn-save-sync').addEventListener('click',()=>{
     const userId=document.getElementById('fb-userId').value.trim();
     if(!userId){alert('ユーザーIDを入力してください。');return;}
@@ -2329,7 +2407,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   // 背景クリック
   confirmDialog.addEventListener('click',(e)=>{if(e.target===confirmDialog){ hideConfirm(); const sb=document.querySelector('#event-form button[type="submit"]'); if(sb){sb.disabled=false;sb.textContent='保存';} }});
   document.getElementById('event-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)closeModal();});
-  document.getElementById('sync-modal').addEventListener('click',(e)=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 
   // ===== 初期化 =====
   loadEvents();
@@ -2439,15 +2516,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   var _origOpenEdit=openEditModal;
   openEditModal=function(ev){ _origOpenEdit(ev); renderTagOptions(); setTagCheckboxes(ev.tags||[]); };
 
-  // 表記設定モーダル
+  // 表記設定（設定モーダル内タブ）
   (function(){
-    var modal=document.getElementById('tag-setting-modal');
-    var btnOpen=document.getElementById('btn-tag-setting');
-    var btnClose=document.getElementById('btn-close-tag-setting');
     var btnAdd=document.getElementById('btn-add-tag');
     var input=document.getElementById('new-tag-name');
     var listEl=document.getElementById('tag-setting-list');
-    function renderList(){
+    window.__renderTagSettingList=function renderList(){
       var tags=getTagList();listEl.innerHTML='';
       for(var i=0;i<tags.length;i++){
         var div=document.createElement('div');div.className='tag-setting-item';
@@ -2458,15 +2532,15 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         });
         div.appendChild(span);div.appendChild(btn);listEl.appendChild(div);
       }
-    }
-    btnOpen.addEventListener('click',function(){modal.classList.remove('hidden');renderList();});
-    btnClose.addEventListener('click',function(){modal.classList.add('hidden');});
-    modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.add('hidden');});
+    };
+    // 表記タブ選択時にリスト更新
+    var tabBtn=document.querySelector('.settings-tab[data-tab="tab-tag"]');
+    if(tabBtn) tabBtn.addEventListener('click',function(){window.__renderTagSettingList();});
     btnAdd.addEventListener('click',function(){
       var name=input.value.trim();if(!name)return;
       var tags=getTagList();
       if(tags.indexOf(name)!==-1){alert('同じ表記が既に存在します。');return;}
-      tags.push(name);saveTagList(tags);input.value='';renderList();renderTagOptions();
+      tags.push(name);saveTagList(tags);input.value='';window.__renderTagSettingList();renderTagOptions();
     });
   })();
 
@@ -2497,18 +2571,35 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         var detailHtml=ev.detail?'<div class="widget-event-detail">'+escapeHtml(ev.detail)+'</div>':'';
         var tagsHtml='';
         if(ev.tags&&ev.tags.length>0){for(var t=0;t<ev.tags.length;t++){tagsHtml+='<span class="widget-tag">'+escapeHtml(ev.tags[t])+'</span>';}}
+        var photosHtml='';
+        var evPhotos=ev.photos||(ev.photo?[ev.photo]:[]);
+        if(evPhotos.length>0){
+          photosHtml+='<div class="widget-photos">';
+          for(var p=0;p<evPhotos.length;p++){photosHtml+='<img class="widget-photo-thumb" src="'+evPhotos[p]+'" data-action="show-photo">';}
+          photosHtml+='</div>';
+        }
         html+='<div class="'+rowCls+'" data-widget-date="'+dk+'" data-widget-id="'+ev.id+'" style="cursor:pointer">'
           +'<span class="widget-time-text">'+timeStr+'</span> '
           +'<div class="widget-event-content">'
           +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>'
           +tagsHtml
           +detailHtml
+          +photosHtml
           +'</div>'
           +'</div>';
       }
     }
     html+='</div>';
     w.innerHTML=html;
+    // ウィジェット写真クリック → ライトボックス表示（行クリックを阻止）
+    w.querySelectorAll('.widget-photo-thumb[data-action="show-photo"]').forEach(function(img){
+      img.addEventListener('click',function(e){
+        e.stopPropagation();
+        var wrap=this.closest('.widget-photos');
+        var siblings=wrap?Array.from(wrap.querySelectorAll('[data-action="show-photo"]')).map(function(i){return i.src;}):[];
+        if(typeof openLightbox==='function') openLightbox(this.src, siblings);
+      });
+    });
     // ウィジェット行クリック → 詳細パネル表示
     w.querySelectorAll('.widget-event-row[data-widget-date]').forEach(function(row){
       row.addEventListener('click',function(){
@@ -2543,13 +2634,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   var currentSite = getCurrentSite();
   var siteSelect = document.getElementById('site-select');
-  var btnSiteManage = document.getElementById('btn-site-manage');
-  var siteModal = document.getElementById('site-modal');
-  var btnCloseSite = document.getElementById('btn-close-site');
   var btnAddSite = document.getElementById('btn-add-site');
   var newSiteInput = document.getElementById('new-site-name');
   var siteListEl = document.getElementById('site-list');
-  // appTitle removed - site name shown in selector only
 
   // Update title (no-op, site name shown in selector)
   function updateTitle() {}
@@ -2581,21 +2668,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
   });
 
-  // Open site management modal
-  btnSiteManage.addEventListener('click', function() {
-    renderSiteList();
-    siteModal.classList.remove('hidden');
-  });
-
-  // Close site management modal
-  btnCloseSite.addEventListener('click', function() {
-    siteModal.classList.add('hidden');
-  });
-
-  // Close on background click
-  siteModal.addEventListener('click', function(e) {
-    if (e.target === siteModal) siteModal.classList.add('hidden');
-  });
+  // 共有カレンダータブ選択時にリスト更新
+  var siteTabBtn = document.querySelector('.settings-tab[data-tab="tab-site"]');
+  if (siteTabBtn) siteTabBtn.addEventListener('click', function() { renderSiteList(); });
 
   // Get storage key prefix for a site name
   function getSitePrefix(siteName) {
