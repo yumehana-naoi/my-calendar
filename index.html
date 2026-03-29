@@ -456,10 +456,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle;
 }
 .widget-photo-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 0.85rem; cursor: pointer; opacity: 0.6; transition: opacity 0.15s;
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.65rem; font-weight: 700; color: #2E7D32; cursor: pointer;
+  background: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 4px;
+  padding: 1px 6px; transition: all 0.15s; white-space: nowrap;
 }
-.widget-photo-icon:hover { opacity: 1; }
+.widget-photo-icon:hover { background: #C8E6C9; border-color: #81C784; }
 .widget-empty {
   text-align: center; padding: 8px; color: #4A7A56;
   font-size: 0.85rem; opacity: 0.7; font-style: italic;
@@ -2589,7 +2591,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         var evPhotos=getEventPhotos(ev);
         if(evPhotos.length>0){
           photosHtml='<span class="widget-photos" data-photos="'+evPhotos.map(function(u){return encodeURIComponent(u);}).join(',')+'">';
-          photosHtml+='<span class="widget-photo-icon" data-action="show-photo">📎'+( evPhotos.length>1?' '+evPhotos.length:'')+'</span>';
+          photosHtml+='<span class="widget-photo-icon" data-action="show-photo">データ表示'+( evPhotos.length>1?' ('+evPhotos.length+')':'')+'</span>';
           photosHtml+='</span>';
         }
         html+='<div class="'+rowCls+'" data-widget-date="'+dk+'" data-widget-id="'+ev.id+'" style="cursor:pointer">'
