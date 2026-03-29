@@ -69,7 +69,8 @@ body {
 .header-btn:hover { background: #E8F5E9; border-color: #81C784; }
 
 #main-layout { display: flex; max-width: 100%; margin: 0 auto; }
-#calendar-container { flex: 1; min-width: 0; padding: 8px; overflow-x: auto; }
+#main-left { flex: 1; min-width: 0; }
+#calendar-container { padding: 8px; overflow-x: auto; }
 
 #detail-panel {
   width: 400px; min-width: 400px; background: white;
@@ -106,7 +107,7 @@ body {
   padding: 6px 4px;
 }
 
-.month-grid { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 2px; margin-bottom: 8px; min-width: 840px; }
+.month-grid { display: grid; grid-template-columns: repeat(7, minmax(min-content, 1fr)); gap: 2px; margin-bottom: 8px; }
 
 .day-cell {
   background: var(--card-bg); border: 1px solid var(--border);
@@ -399,7 +400,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px; margin-bottom: 4px;
   background: rgba(255,255,255,0.75); border-radius: 10px;
-  border: 1px solid #C8E6C9;
+  border: 1px solid #81C784;
   backdrop-filter: blur(4px); transition: background 0.15s;
 }
 .widget-event-row:hover { background: rgba(255,255,255,0.95); }
@@ -450,7 +451,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   50% { box-shadow: 0 0 16px rgba(239,68,68,0.4); }
 }
 .widget-event-row.widget-done {
-  opacity: 0.4;
+  opacity: 0.25;
 }
 .widget-event-row.widget-done .widget-event-title {
   text-decoration: line-through;
@@ -546,7 +547,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 <div id="sync-bar" style="display:none;text-align:center;padding:4px 8px;font-size:0.8rem;font-weight:bold;transition:all 0.3s;"></div>
 
 <div id="main-layout">
-  <div id="calendar-container"><div id="today-widget" class="today-widget"></div></div>
+  <div id="main-left">
+    <div id="today-widget" class="today-widget"></div>
+    <div id="calendar-container"></div>
+  </div>
   <div id="detail-panel" class="hidden">
     <div class="panel-header">
       <h2 id="detail-date-title"></h2>
@@ -1435,11 +1439,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   function renderAllMonths() {
     const c=document.getElementById('calendar-container');
-    const w=document.getElementById('today-widget');
     const f=document.createDocumentFragment();
-    // ウィジェットを退避
-    if(w&&w.parentNode===c) f.appendChild(w);
-    // 未完予定枠（ウィジェットの下）
+    // 未完予定枠（カレンダーの上）
     f.appendChild(renderIncompleteSection());
     // 当月
     f.appendChild(renderMonth(new Date(baseMonth.getFullYear(),baseMonth.getMonth(),1),true));
