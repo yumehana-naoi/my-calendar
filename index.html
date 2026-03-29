@@ -70,7 +70,8 @@ body {
 
 #main-layout { display: flex; max-width: 100%; margin: 0 auto; }
 #main-left { flex: 1; min-width: 0; }
-#calendar-container { padding: 8px; overflow-x: auto; }
+#calendar-container { padding: 8px; }
+.month-grid-wrap { overflow-x: auto; }
 
 #detail-panel {
   width: 400px; min-width: 400px; background: white;
@@ -300,10 +301,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* 未完予定枠 */
 .incomplete-section {
-  margin: 4px 0 12px; padding: 12px; background: #F0F8F0;
+  margin: 4px 8px 12px; padding: 12px; background: #F0F8F0;
   border: 2px solid #A5D6A7; border-radius: var(--radius);
   animation: fadeIn 0.3s ease;
-  position: sticky; left: 0; width: 100%; box-sizing: border-box;
+  box-sizing: border-box;
 }
 .incomplete-header {
   font-size: 1rem; font-weight: 700; color: #2E7D32;
@@ -363,12 +364,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* 当日予定ウィジェット */
 .today-widget {
-  margin: 0 0 8px; padding: 16px 8px;
-  position: sticky; left: 0; z-index: 10; width: 100vw; max-width: 100%; box-sizing: border-box;
+  margin: 0 8px 8px; padding: 16px 8px;
+  position: relative; z-index: 10; box-sizing: border-box;
   background: linear-gradient(135deg, #FFF5F5 0%, #FFE8EC 40%, #FFF0F0 100%);
   border-radius: 16px; border: 1px solid #F0C0C8;
   box-shadow: 0 2px 12px rgba(220,120,140,0.1);
-  position: relative; overflow: hidden;
+  overflow: hidden;
 }
 .today-widget::before {
   content: ''; position: absolute; top: 10px; right: 18px;
@@ -1439,9 +1440,14 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   function renderAllMonths() {
     const c=document.getElementById('calendar-container');
+    const mainLeft=document.getElementById('main-left');
+    // 未完予定枠（calendar-containerの外、ウィジェットの下）
+    var oldInc=mainLeft.querySelector('.incomplete-section');
+    if(oldInc) oldInc.remove();
+    var incSec=renderIncompleteSection();
+    mainLeft.insertBefore(incSec, c);
+    // カレンダー本体
     const f=document.createDocumentFragment();
-    // 未完予定枠（カレンダーの上）
-    f.appendChild(renderIncompleteSection());
     // 当月
     f.appendChild(renderMonth(new Date(baseMonth.getFullYear(),baseMonth.getMonth(),1),true));
     // 翌月
@@ -1485,21 +1491,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       }
       cell.dataset.date=dk; grid.appendChild(cell);
     }
-    block.appendChild(grid); return block;
+    const gridWrap=document.createElement('div'); gridWrap.className='month-grid-wrap';
+    gridWrap.appendChild(grid);
+    block.appendChild(gridWrap); return block;
   }
 
   // ===== イベントデリゲーション =====
   document.getElementById('calendar-container').addEventListener('click',(e)=>{
     if(e.target.id==='btn-prev-month'){baseMonth.setMonth(baseMonth.getMonth()-1);renderAllMonths();return;}
     if(e.target.id==='btn-next-month'){baseMonth.setMonth(baseMonth.getMonth()+1);renderAllMonths();return;}
-    // 未完予定枠クリック→全未完予定を詳細パネル表示
-    const incSec=e.target.closest('.incomplete-section');
-    if(incSec){
-      openIncompleteDetail();
-      return;
-    }
     const cell=e.target.closest('.day-cell:not(.empty)');
     if(cell&&cell.dataset.date) openDetailPanel(cell.dataset.date);
+  });
+  // 未完予定枠クリック→全未完予定を詳細パネル表示
+  document.getElementById('main-left').addEventListener('click',(e)=>{
+    const incSec=e.target.closest('.incomplete-section');
+    if(incSec){ openIncompleteDetail(); return; }
   });
   document.getElementById('btn-refresh').addEventListener('click',()=>{
     const btn=document.getElementById('btn-refresh');
