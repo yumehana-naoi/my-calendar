@@ -309,26 +309,6 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
 }
 .incomplete-header::before { content: '📋'; font-size: 1.1rem; }
-.incomplete-table { width: 100%; border-collapse: collapse; }
-.incomplete-table th {
-  text-align: left; font-size: 0.75rem; color: var(--text-light);
-  padding: 4px 8px; border-bottom: 1px solid #C8E6C9;
-  white-space: nowrap;
-}
-.incomplete-table td {
-  padding: 6px 8px; border-bottom: 1px solid #C8E6C9;
-  font-size: 0.85rem; vertical-align: middle;
-}
-.incomplete-row { cursor: pointer; transition: background 0.15s; }
-.incomplete-row:hover { background: #E8F5E9; }
-.incomplete-row:last-child td { border-bottom: none; }
-.incomplete-row .inc-date { white-space: nowrap; color: var(--text-light); min-width: 90px; }
-.incomplete-row .inc-time { white-space: nowrap; color: var(--text); min-width: 50px; }
-.incomplete-row .inc-title { color: var(--text); font-weight: 500; }
-.incomplete-color-dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-  margin-right: 4px; vertical-align: middle; flex-shrink: 0;
-}
 .detail-event-date-label {
   font-size: 0.75rem; color: var(--text-light); font-weight: 600;
   margin-bottom: 2px;
@@ -336,11 +316,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .incomplete-empty {
   font-size: 0.85rem; color: var(--text-light); padding: 4px 0;
 }
-@media(max-width:900px){
-  .incomplete-table th:first-child, .incomplete-table td:first-child { padding-left: 4px; }
-  .incomplete-table td { font-size: 0.8rem; padding: 5px 4px; }
+.inc-date-badge {
+  font-size: 0.7rem; font-weight: 700; color: var(--text-light);
+  white-space: nowrap; flex-shrink: 0; min-width: 55px;
 }
-
 /* ウィジェット内タグ */
 .tag-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .tag-label {
@@ -1434,27 +1413,37 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       sec.appendChild(empty);
       return sec;
     }
-    var table=document.createElement('table');
-    table.className='incomplete-table';
-    table.innerHTML='<thead><tr><th>日付</th><th>時間</th><th>予定</th></tr></thead>';
-    var tbody=document.createElement('tbody');
-    var colorMap=['var(--color0)','var(--color1)','var(--color2)','var(--color3)'];
+    var eventsWrap=document.createElement('div');
+    eventsWrap.className='widget-events';
     for(var i=0;i<items.length;i++){
       var it=items[i], ev=it.event;
-      var tr=document.createElement('tr');
-      tr.className='incomplete-row';
-      tr.dataset.date=it.dateKey;
-      tr.dataset.eventId=ev.id;
       var d=new Date(it.dateKey+'T00:00:00');
       var dateStr=(d.getMonth()+1)+'/'+d.getDate()+'('+WEEKDAYS[d.getDay()]+')';
-      var dotColor=colorMap[ev.colorIndex]||colorMap[0];
-      tr.innerHTML='<td class="inc-date">'+dateStr+'</td>'
-        +'<td class="inc-time">'+(ev.time||'-')+'</td>'
-        +'<td class="inc-title"><span class="incomplete-color-dot" style="background:'+dotColor+'"></span>'+escapeHtml(ev.title||'（無題）')+'</td>';
-      tbody.appendChild(tr);
+      var timeStr=ev.time||'--:--';
+      var isImportant=ev.colorIndex===3;
+      var rowCls='widget-event-row';
+      if(isImportant) rowCls+=' important';
+      var detailHtml=ev.detail?'<div class="widget-event-detail">'+escapeHtml(ev.detail)+'</div>':'';
+      var tagsHtml='';
+      if(ev.tags&&ev.tags.length>0){for(var t=0;t<ev.tags.length;t++){tagsHtml+='<span class="widget-tag">'+escapeHtml(ev.tags[t])+'</span>';}}
+      var photosHtml='';
+      var evPhotos=getEventPhotos(ev);
+      if(evPhotos.length>0){
+        photosHtml='<span class="widget-photos" data-photos="'+evPhotos.map(function(u){return encodeURIComponent(u);}).join(',')+'">';
+        photosHtml+='<span class="widget-photo-icon" data-action="show-photo">データ表示'+(evPhotos.length>1?' ('+evPhotos.length+')':'')+'</span>';
+        photosHtml+='</span>';
+      }
+      eventsWrap.innerHTML+='<div class="'+rowCls+'" data-inc-date="'+it.dateKey+'" data-inc-id="'+ev.id+'" style="cursor:pointer">'
+        +'<span class="inc-date-badge">'+dateStr+'</span>'
+        +'<span class="widget-time-text">'+timeStr+'</span> '
+        +'<div class="widget-event-content">'
+        +'<div class="widget-event-title">'+escapeHtml(ev.title||'（無題）')+photosHtml+'</div>'
+        +tagsHtml
+        +detailHtml
+        +'</div>'
+        +'</div>';
     }
-    table.appendChild(tbody);
-    sec.appendChild(table);
+    sec.appendChild(eventsWrap);
     return sec;
   }
 
@@ -1524,10 +1513,28 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const cell=e.target.closest('.day-cell:not(.empty)');
     if(cell&&cell.dataset.date) openDetailPanel(cell.dataset.date);
   });
-  // 未完予定枠クリック→全未完予定を詳細パネル表示
+  // 未完予定枠クリック
   document.getElementById('main-left').addEventListener('click',(e)=>{
-    const incSec=e.target.closest('.incomplete-section');
-    if(incSec){ openIncompleteDetail(); return; }
+    // 写真アイコンクリック → ライトボックス
+    var photoIcon=e.target.closest('.incomplete-section .widget-photo-icon[data-action="show-photo"]');
+    if(photoIcon){
+      e.stopPropagation();
+      var wrap=photoIcon.closest('.widget-photos');
+      var raw=wrap?wrap.dataset.photos:'';
+      var photos=raw?raw.split(',').map(function(u){return decodeURIComponent(u);}):[];
+      if(photos.length>0&&window.__openLightbox) window.__openLightbox(photos[0],photos);
+      return;
+    }
+    // 個別行クリック → 該当日の詳細パネル
+    var incRow=e.target.closest('[data-inc-date]');
+    if(incRow){
+      var dk=incRow.dataset.incDate;
+      if(dk) openDetailPanel(dk);
+      return;
+    }
+    // セクションヘッダクリック → 全未完一覧
+    var incHeader=e.target.closest('.incomplete-header');
+    if(incHeader){ openIncompleteDetail(); return; }
   });
   document.getElementById('btn-refresh').addEventListener('click',()=>{
     const btn=document.getElementById('btn-refresh');
