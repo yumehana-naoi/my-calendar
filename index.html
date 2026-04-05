@@ -2382,14 +2382,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         if(!firebaseDb){sizeEl.textContent='';}
         else{var kb=estimateDocSizeKB();sizeEl.textContent='データ容量: '+(kb>=1024?(kb/1024).toFixed(1)+'MB':Math.round(kb)+'KB')+' / 1MB';sizeEl.style.color=kb>=900?'#DC2626':kb>=700?'#F59E0B':'#6B7280';}
       }
-      // アクティブタブのコンテンツを初期表示時に描画
-      var activeTab=settingsModal.querySelector('.settings-tab.active');
-      if(activeTab){
-        var tabId=activeTab.dataset.tab;
-        if(tabId==='tab-site'&&typeof renderSiteList==='function') renderSiteList();
-        if(tabId==='tab-tag'&&typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
-      }
       settingsModal.classList.remove('hidden');
+      // アクティブタブのコンテンツを初期表示時に描画
+      setTimeout(function(){
+        var activeTab=settingsModal.querySelector('.settings-tab.active');
+        if(activeTab) activeTab.click();
+      },0);
     });
     document.getElementById('btn-close-settings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
     settingsModal.addEventListener('click',function(e){if(e.target===settingsModal)settingsModal.classList.add('hidden');});
@@ -2736,6 +2734,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   }
 
   // Render site list in management modal
+  window.__renderSiteList = renderSiteList;
   function renderSiteList() {
     var sites = getSiteList();
     siteListEl.innerHTML = '';
