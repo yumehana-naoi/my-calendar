@@ -1253,22 +1253,36 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               deduplicateEvents();
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
               localStorage.setItem(LAST_MODIFIED_KEY,rUpd||getNow());
+              if(rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); }
               lastSyncedJSON=JSON.stringify(events);
               showSyncBar('✓ 読み込み完了','#059669',true);
               renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+              if(typeof renderTagOptions==='function') renderTagOptions();
+              if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
             } else {
               if(isSyncingToFirebase) return;
               const remoteJSON=JSON.stringify(rd.events||{});
-              if(remoteJSON===lastSyncedJSON) return;
+              const remoteTagsJSON=JSON.stringify(rd.tags||[]);
+              const localTagsJSON=JSON.stringify(getTagList());
+              const eventsChanged=remoteJSON!==lastSyncedJSON;
+              const tagsChanged=remoteTagsJSON!==localTagsJSON;
+              if(!eventsChanged&&!tagsChanged) return;
               // リモートの削除済みIDを取り込み
               if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
               isSyncingFromFirebase=true;
-              events=rd.events||{};
-              deduplicateEvents();
-              lastSyncedJSON=JSON.stringify(events);
-              localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              if(eventsChanged){
+                events=rd.events||{};
+                deduplicateEvents();
+                lastSyncedJSON=JSON.stringify(events);
+                localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              }
+              if(tagsChanged&&rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); }
               showSyncBar('☁️ 他デバイスから更新を受信','#2563EB',true);
-              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
+              if(eventsChanged){ renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate); }
+              if(tagsChanged){
+                if(typeof renderTagOptions==='function') renderTagOptions();
+                if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
+              }
               isSyncingFromFirebase=false;
             }
           } else { initialLoadDone=true; syncToFirebase(getNow()); }
@@ -1308,7 +1322,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
     updateSyncStatus('connected','接続中 ✓ ('+Math.round(docKB)+'KB)');
     // undefinedを完全除去（Firestoreはundefined不可）
-    const payload=JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:ts||getNow(),photoUsageBytes:photoUsageBytes}));
+    const payload=JSON.parse(JSON.stringify({events:events,deletedIds:deletedIds,updatedAt:ts||getNow(),photoUsageBytes:photoUsageBytes,tags:getTagList()}));
     isSyncingToFirebase=true; lastSyncedJSON=JSON.stringify(events);
     try{
       firebaseDb.collection('calendars').doc(c.userId).set(payload).then(()=>{ isSyncingToFirebase=false; updateDocSizeDisplay(); showSyncBar('✓ 同期完了','#059669',true); }).catch(err=>{ isSyncingToFirebase=false; updateSyncStatus('error','同期エラー: '+err.message); showSyncBar('✕ 同期エラー','#DC2626',false); });
@@ -2368,6 +2382,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         if(!firebaseDb){sizeEl.textContent='';}
         else{var kb=estimateDocSizeKB();sizeEl.textContent='データ容量: '+(kb>=1024?(kb/1024).toFixed(1)+'MB':Math.round(kb)+'KB')+' / 1MB';sizeEl.style.color=kb>=900?'#DC2626':kb>=700?'#F59E0B':'#6B7280';}
       }
+      // アクティブタブのコンテンツを初期表示時に描画
+      var activeTab=settingsModal.querySelector('.settings-tab.active');
+      if(activeTab){
+        var tabId=activeTab.dataset.tab;
+        if(tabId==='tab-site'&&typeof renderSiteList==='function') renderSiteList();
+        if(tabId==='tab-tag'&&typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
+      }
       settingsModal.classList.remove('hidden');
     });
     document.getElementById('btn-close-settings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
@@ -2508,7 +2529,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function getTagList(){
     try{var s=localStorage.getItem(TAG_STORAGE_KEY);return s?JSON.parse(s):['薬準備','欠食'];}catch(e){return['薬準備','欠食'];}
   }
-  function saveTagList(list){localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(list));}
+  function saveTagList(list){localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(list));if(!isSyncingFromFirebase)syncToFirebase(getNow());}
   function renderTagOptions(){
     var c=document.getElementById('tag-options-container');if(!c)return;
     var tags=getTagList();
