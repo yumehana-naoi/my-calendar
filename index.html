@@ -1262,27 +1262,17 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
             } else {
               if(isSyncingToFirebase) return;
               const remoteJSON=JSON.stringify(rd.events||{});
-              const remoteTagsJSON=JSON.stringify(rd.tags||[]);
-              const localTagsJSON=JSON.stringify(getTagList());
-              const eventsChanged=remoteJSON!==lastSyncedJSON;
-              const tagsChanged=remoteTagsJSON!==localTagsJSON;
-              if(!eventsChanged&&!tagsChanged) return;
+              if(remoteJSON===lastSyncedJSON) return;
               // リモートの削除済みIDを取り込み
               if(rd.deletedIds) Object.assign(deletedIds, rd.deletedIds);
               isSyncingFromFirebase=true;
-              if(eventsChanged){
-                events=rd.events||{};
-                deduplicateEvents();
-                lastSyncedJSON=JSON.stringify(events);
-                localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
-              }
-              if(tagsChanged&&rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); }
+              events=rd.events||{};
+              deduplicateEvents();
+              lastSyncedJSON=JSON.stringify(events);
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
+              if(rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); renderTagOptions(); if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList(); }
               showSyncBar('☁️ 他デバイスから更新を受信','#2563EB',true);
-              if(eventsChanged){ renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate); }
-              if(tagsChanged){
-                if(typeof renderTagOptions==='function') renderTagOptions();
-                if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
-              }
+              renderAllMonths(); if(selectedDate) renderDetailPanel(selectedDate);
               isSyncingFromFirebase=false;
             }
           } else { initialLoadDone=true; syncToFirebase(getNow()); }
@@ -2383,11 +2373,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         else{var kb=estimateDocSizeKB();sizeEl.textContent='データ容量: '+(kb>=1024?(kb/1024).toFixed(1)+'MB':Math.round(kb)+'KB')+' / 1MB';sizeEl.style.color=kb>=900?'#DC2626':kb>=700?'#F59E0B':'#6B7280';}
       }
       settingsModal.classList.remove('hidden');
-      // アクティブタブのコンテンツを初期表示時に描画
-      setTimeout(function(){
-        var activeTab=settingsModal.querySelector('.settings-tab.active');
-        if(activeTab) activeTab.click();
-      },0);
+      // アクティブタブのコンテンツを描画
+      if(typeof window.__renderSiteList==='function') window.__renderSiteList();
+      if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList();
     });
     document.getElementById('btn-close-settings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
     settingsModal.addEventListener('click',function(e){if(e.target===settingsModal)settingsModal.classList.add('hidden');});
@@ -2527,7 +2515,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function getTagList(){
     try{var s=localStorage.getItem(TAG_STORAGE_KEY);return s?JSON.parse(s):['薬準備','欠食'];}catch(e){return['薬準備','欠食'];}
   }
-  function saveTagList(list){localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(list));if(!isSyncingFromFirebase)syncToFirebase(getNow());}
+  function saveTagList(list){
+    localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(list));
+    if(!isSyncingFromFirebase&&firebaseDb){
+      isSyncingToFirebase=false;
+      syncToFirebase(getNow());
+    }
+  }
   function renderTagOptions(){
     var c=document.getElementById('tag-options-container');if(!c)return;
     var tags=getTagList();
@@ -2896,6 +2890,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
   // Initialize
   populateSiteSelect();
+  renderSiteList();
 })();
 </script>
 <script>
