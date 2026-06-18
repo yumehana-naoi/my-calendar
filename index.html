@@ -1251,6 +1251,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               localStorage.removeItem(PENDING_SYNC_KEY);
               events=rd.events||{};
               deduplicateEvents();
+              stripEmbeddedPhotos(events);
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
               localStorage.setItem(LAST_MODIFIED_KEY,rUpd||getNow());
               if(rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); }
@@ -1268,6 +1269,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
               isSyncingFromFirebase=true;
               events=rd.events||{};
               deduplicateEvents();
+              stripEmbeddedPhotos(events);
               lastSyncedJSON=JSON.stringify(events);
               localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); localStorage.setItem(LAST_MODIFIED_KEY,rUpd);
               if(rd.tags) { localStorage.setItem(TAG_STORAGE_KEY,JSON.stringify(rd.tags)); renderTagOptions(); if(typeof window.__renderTagSettingList==='function') window.__renderTagSettingList(); }
@@ -1294,6 +1296,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       if(events[dk].length===0) delete events[dk];
     }
   }
+  // base64写真本体(data:)を全eventsから除去（戻り値=除去数）。容量超過による同期停止を防ぐ最終防御
+  function stripEmbeddedPhotos(target) {
+    if(!target||typeof target!=='object') return 0;
+    let removed=0;
+    const isDataUrl=(p)=>typeof p==='string'&&p.trimStart().toLowerCase().startsWith('data:');
+    for(const dk of Object.keys(target)){
+      const list=target[dk];
+      if(!Array.isArray(list)) continue;
+      for(let i=0;i<list.length;i++){
+        const ev=list[i];
+        if(!ev||typeof ev!=='object') continue;
+        if(Array.isArray(ev.photos)){const before=ev.photos.length;ev.photos=ev.photos.filter(p=>!isDataUrl(p));removed+=before-ev.photos.length;}
+        if(isDataUrl(ev.photo)){delete ev.photo;removed++;}
+      }
+    }
+    return removed;
+  }
   function cleanupDeletedIds() {
     const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-30);
     const cutoffStr=cutoff.toISOString();
@@ -1304,6 +1323,9 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function syncToFirebase(ts) {
     const c=loadSyncConfig(); if(!firebaseDb||!c?.userId)return;
     cleanupDeletedIds();
+    // 同期直前の最終防御: base64写真本体を除去（localStorageも整合更新）
+    const _stripped=stripEmbeddedPhotos(events);
+    if(_stripped>0){ localStorage.setItem(STORAGE_KEY,JSON.stringify(events)); showSyncBar('☁️ 大容量写真'+_stripped+'件を除外して同期','#2563EB',true); }
     // Firestoreドキュメントサイズチェック（1MB制限）
     const docKB=estimateDocSizeKB();
     if(docKB>=950){
@@ -1748,6 +1770,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(ev.groupId){
       document.getElementById('recurrence-group').style.display='none';
       document.getElementById('extend-end-group').style.display='none';
+      if(ev.recurrenceInfo&&ev.recurrenceInfo.type==='custom'){
+        // カスタム群: 日付の追加・削除UIを表示し、現在のグループ日をプリチェック
+        customDates=[...new Set(getGroupDates(ev.groupId))];
+        document.getElementById('custom-options').classList.remove('hidden');
+        miniCalMonth=selectedDate?new Date(selectedDate+'T00:00:00'):new Date();
+        renderMiniCalendar();
+      }
     } else {
       document.getElementById('recurrence-group').style.display='';
       document.getElementById('extend-end-group').style.display='none';
@@ -2052,7 +2081,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     if(type==='weekly') document.getElementById('weekly-options').classList.remove('hidden');
     else if(type==='monthly'){document.getElementById('monthly-options').classList.remove('hidden');if(selectedDate){document.getElementById('monthly-day').value=new Date(selectedDate+'T00:00:00').getDate();}}
     else if(type==='nth-weekday') document.getElementById('nth-weekday-options').classList.remove('hidden');
-    else if(type==='custom'){document.getElementById('custom-options').classList.remove('hidden');miniCalMonth=selectedDate?new Date(selectedDate+'T00:00:00'):new Date();renderMiniCalendar();}
+    else if(type==='custom'){document.getElementById('custom-options').classList.remove('hidden');if(editingEvent&&!editingEvent.groupId&&customDates.length===0&&selectedDate){customDates=[selectedDate];}miniCalMonth=selectedDate?new Date(selectedDate+'T00:00:00'):new Date();renderMiniCalendar();}
   });
 
   document.querySelectorAll('.weekday-btn').forEach(b=>b.addEventListener('click',()=>b.classList.toggle('active')));
@@ -2130,7 +2159,30 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       const updates={time,title,detail,colorIndex,photos:photos,tags:tags};
 
       if(editingEvent.groupId){
+        // カスタム群: カレンダーで選んだ日付に追加/削除を反映
+        if(editingEvent.recurrenceInfo&&editingEvent.recurrenceInfo.type==='custom'){
+          const oldDates=getGroupDates(editingEvent.groupId);
+          const newDates=[...new Set(customDates)];
+          const added=newDates.filter(d=>oldDates.indexOf(d)===-1);
+          const removed=oldDates.filter(d=>newDates.indexOf(d)===-1);
+          showCustomGroupEditConfirm(updates, added, removed, restoreBtn);
+          return;
+        }
         showEditGroupConfirm(updates, newDate, restoreBtn);
+        return;
+      }
+      // ★単発予定で繰り返しが選択された → グループに展開
+      if(recurrenceType!=='none'){
+        const baseDate=(newDate&&newDate!==selectedDate)?newDate:selectedDate;
+        const result=generateRecurringDates(recurrenceType, baseDate);
+        let dates=result.dates; const recurrenceInfo=result.info;
+        if(!dates||dates.length===0) dates=[baseDate];
+        deleteEvent(selectedDate, editingEvent.id); // 元の単発を削除
+        const groupId=generateId();
+        for(const d of dates){ addEvent(d,{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos:photos.slice(),tags:tags.slice()}); }
+        saveEvents(); restoreBtn();
+        selectedDate=dates.indexOf(baseDate)!==-1?baseDate:dates[0];
+        closeModal();
         return;
       }
       // 単発予定: 日付変更
@@ -2348,6 +2400,37 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     confirmDialog.classList.remove('hidden');
   }
 
+  // ===== カスタム繰り返し: 日付の追加・削除編集 =====
+  function getGroupDates(gid){ const ds=[]; for(const dk of Object.keys(events)){ if((events[dk]||[]).some(e=>e.groupId===gid)) ds.push(dk); } return ds.sort(); }
+
+  function showCustomGroupEditConfirm(updates, added, removed, restoreBtn) {
+    const gid=editingEvent.groupId;
+    const recInfo=editingEvent.recurrenceInfo||{type:'custom'};
+    const hasDateChange=added.length>0||removed.length>0;
+    document.getElementById('confirm-title').textContent='繰り返し（カスタム）の変更';
+    document.getElementById('confirm-message').textContent=(hasDateChange?('日付を 追加'+added.length+'日 / 削除'+removed.length+'日 変更します。\n'):'')+'内容の変更をどの範囲に反映しますか？';
+    cbSingle.style.display='';
+    cbSingle.textContent=hasDateChange?'日付変更＋この日の内容':'この日のみ';
+    cbOk.textContent=hasDateChange?'日付変更＋全ての日':'全ての日に反映';
+    cbOk.style.background='#2563EB';
+    function reconcile(scope){
+      // 追加日
+      for(const d of added){ addEvent(d,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:recInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }
+      // 削除日（同日同groupIdは全件）
+      for(const d of removed){ (events[d]||[]).slice().forEach(e=>{ if(e.groupId===gid) deleteEvent(d,e.id); }); }
+      // 内容反映（photos/tagsはoccurrence毎に複製）
+      if(scope==='all'){
+        for(const dk of Object.keys(events)){ (events[dk]||[]).forEach(e=>{ if(e.groupId===gid) Object.assign(e,updates,{photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }); }
+      } else {
+        updateEvent(selectedDate,editingEvent.id,updates);
+      }
+    }
+    function finish(){ const rem=getGroupDates(gid); if(rem.indexOf(selectedDate)===-1&&rem.length>0) selectedDate=rem[0]; }
+    onSingleClick=function(){ try{ reconcile('single'); saveEvents(); }catch(e){ alert('編集エラー: '+e.message); } finish(); if(restoreBtn)restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths(); };
+    onOkClick=function(){ try{ reconcile('all'); saveEvents(); }catch(e){ alert('編集エラー: '+e.message); } finish(); if(restoreBtn)restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths(); };
+    confirmDialog.classList.remove('hidden');
+  }
+
   // ===== 設定モーダル =====
   (function(){
     var settingsModal=document.getElementById('settings-modal');
@@ -2434,7 +2517,30 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   document.getElementById('btn-import').addEventListener('click',()=>document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change',(e)=>{
     const file=e.target.files[0];if(!file)return;const reader=new FileReader();
-    reader.onload=(ev)=>{try{const imported=JSON.parse(ev.target.result);for(const[dk,evList]of Object.entries(imported)){if(!events[dk])events[dk]=[];const ids=new Set(events[dk].map(e=>e.id));for(const ev of evList){if(!ids.has(ev.id))events[dk].push(ev);}}saveEvents();renderAllMonths();if(selectedDate)renderDetailPanel(selectedDate);alert('インポートが完了しました。');}catch{alert('ファイルの読み込みに失敗しました。');}};
+    reader.onload=(ev)=>{try{
+      const imported=JSON.parse(ev.target.result);
+      if(!imported||typeof imported!=='object'||Array.isArray(imported)){alert('ファイルの形式が正しくありません。');return;}
+      const isDataUrl=(p)=>typeof p==='string'&&p.trimStart().toLowerCase().startsWith('data:');
+      let dropped=0,skipped=0;
+      for(const[dk,evList]of Object.entries(imported)){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dk)||!Array.isArray(evList)){skipped++;continue;}
+        if(!events[dk])events[dk]=[];
+        const ids=new Set(events[dk].map(e=>e.id));
+        for(const ev of evList){
+          if(!ev||typeof ev!=='object'||Array.isArray(ev)){skipped++;continue;}
+          if(ids.has(ev.id))continue;
+          // base64写真本体（data:）だけ除外。URL等の他要素は保持
+          if(Array.isArray(ev.photos)){const before=ev.photos.length;ev.photos=ev.photos.filter(p=>!isDataUrl(p));dropped+=before-ev.photos.length;}
+          if(isDataUrl(ev.photo)){delete ev.photo;dropped++;}
+          events[dk].push(ev);
+        }
+      }
+      saveEvents();renderAllMonths();if(selectedDate)renderDetailPanel(selectedDate);
+      let msg='インポートが完了しました。';
+      if(dropped>0)msg+='\n容量の大きい写真'+dropped+'件は取り込めませんでした。';
+      if(skipped>0)msg+='\n不正なデータ'+skipped+'件はスキップしました。';
+      alert(msg);
+    }catch{alert('ファイルの読み込みに失敗しました。');}};
     reader.readAsText(file);e.target.value='';
   });
 
@@ -2475,6 +2581,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   })();
   autoExtendRecurringEvents();
   deduplicateEvents();
+  stripEmbeddedPhotos(events); // 既存データに混入したbase64写真本体を起動時に浄化
   // Firestore接続前はlocalStorageのみ保存（pendingSyncをセットしない）
   localStorage.setItem(STORAGE_KEY,JSON.stringify(events));
   baseMonth=new Date();
