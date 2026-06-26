@@ -1776,6 +1776,21 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         document.getElementById('custom-options').classList.remove('hidden');
         miniCalMonth=selectedDate?new Date(selectedDate+'T00:00:00'):new Date();
         renderMiniCalendar();
+      } else if(ev.recurrenceInfo&&['weekly','monthly','nth-weekday'].includes(ev.recurrenceInfo.type)){
+        // 週次/毎月/第N曜日: ルール設定UIを現在値でプリフィル（タイプは固定）
+        const info=ev.recurrenceInfo;
+        if(info.type==='weekly'){
+          document.getElementById('weekly-options').classList.remove('hidden');
+          document.getElementById('week-interval').value=String(info.interval||1);
+          document.querySelectorAll('.weekday-btn').forEach(b=>{ if((info.days||[]).map(Number).indexOf(Number(b.dataset.day))!==-1) b.classList.add('active'); });
+        } else if(info.type==='monthly'){
+          document.getElementById('monthly-options').classList.remove('hidden');
+          document.getElementById('monthly-day').value=String(info.dayOfMonth);
+        } else if(info.type==='nth-weekday'){
+          document.getElementById('nth-weekday-options').classList.remove('hidden');
+          document.getElementById('nth-weekday-day').value=String(info.dow);
+          document.querySelectorAll('.nth-btn').forEach(b=>{ if((info.nths||[]).map(Number).indexOf(Number(b.dataset.nth))!==-1) b.classList.add('active'); });
+        }
       }
     } else {
       document.getElementById('recurrence-group').style.display='';
@@ -2168,6 +2183,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
           showCustomGroupEditConfirm(updates, added, removed, restoreBtn);
           return;
         }
+        // 週次/毎月/第N曜日群: ルール変更があれば明日以降を作り直し
+        const rinfo=editingEvent.recurrenceInfo;
+        if(rinfo&&['weekly','monthly','nth-weekday'].includes(rinfo.type)){
+          const newInfo=readRuleFromUI(rinfo.type);
+          if(!validateRule(newInfo)){ alert('曜日・第N週・日付などを正しく選択してください。'); restoreBtn(); return; }
+          if(ruleChanged(rinfo,newInfo)){ showRuleChangeConfirm(updates, newInfo, restoreBtn); return; }
+        }
         showEditGroupConfirm(updates, newDate, restoreBtn);
         return;
       }
@@ -2428,6 +2450,68 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     function finish(){ const rem=getGroupDates(gid); if(rem.indexOf(selectedDate)===-1&&rem.length>0) selectedDate=rem[0]; }
     onSingleClick=function(){ try{ reconcile('single'); saveEvents(); }catch(e){ alert('編集エラー: '+e.message); } finish(); if(restoreBtn)restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths(); };
     onOkClick=function(){ try{ reconcile('all'); saveEvents(); }catch(e){ alert('編集エラー: '+e.message); } finish(); if(restoreBtn)restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths(); };
+    confirmDialog.classList.remove('hidden');
+  }
+
+  // ===== 週次/毎月/第N曜日 ルール編集 =====
+  // ルールを正規化（数値化・重複除去・昇順）して比較や保存の基準にする
+  function canonRule(info){
+    if(!info) return null;
+    if(info.type==='weekly') return {type:'weekly',interval:Math.max(1,Number(info.interval)||1),days:[...new Set((info.days||[]).map(Number))].filter(d=>d>=0&&d<=6).sort((a,b)=>a-b)};
+    if(info.type==='monthly') return {type:'monthly',dayOfMonth:Number(info.dayOfMonth)};
+    if(info.type==='nth-weekday') return {type:'nth-weekday',dow:Number(info.dow),nths:[...new Set((info.nths||[]).map(Number))].filter(n=>n>=1&&n<=5).sort((a,b)=>a-b)};
+    return info;
+  }
+  function readRuleFromUI(type){
+    if(type==='weekly'){ const interval=Number(document.getElementById('week-interval').value)||1; const days=[]; document.querySelectorAll('.weekday-btn.active').forEach(b=>days.push(Number(b.dataset.day))); return canonRule({type:'weekly',interval,days}); }
+    if(type==='monthly') return canonRule({type:'monthly',dayOfMonth:Number(document.getElementById('monthly-day').value)});
+    if(type==='nth-weekday'){ const dow=Number(document.getElementById('nth-weekday-day').value); const nths=[]; document.querySelectorAll('.nth-btn.active').forEach(b=>nths.push(Number(b.dataset.nth))); return canonRule({type:'nth-weekday',dow,nths}); }
+    return null;
+  }
+  function validateRule(info){
+    if(!info) return false;
+    if(info.type==='weekly') return info.days.length>0&&info.interval>=1;
+    if(info.type==='monthly') return info.dayOfMonth>=1&&info.dayOfMonth<=31;
+    if(info.type==='nth-weekday') return info.nths.length>0;
+    return false;
+  }
+  function ruleChanged(a,b){ return JSON.stringify(canonRule(a))!==JSON.stringify(canonRule(b)); }
+  // info から start〜end の日付を生成（DOM非依存）
+  function datesFromRule(info,startKey,endKey){
+    const s=new Date(startKey+'T00:00:00'),e=new Date(endKey+'T23:59:59'),out=[];
+    if(info.type==='weekly'){let c=new Date(s);c.setDate(c.getDate()-c.getDay());while(c<=e){for(const dow of(info.days||[])){const t=new Date(c);t.setDate(t.getDate()+dow);if(t>=s&&t<=e)out.push(dateToKey(t));}c.setDate(c.getDate()+7*(info.interval||1));}}
+    else if(info.type==='monthly'){const dom=info.dayOfMonth;let c=new Date(s.getFullYear(),s.getMonth(),1);while(c<=e){const dim=new Date(c.getFullYear(),c.getMonth()+1,0).getDate();const ad=Math.min(dom,dim);const t=new Date(c.getFullYear(),c.getMonth(),ad);if(t>=s&&t<=e)out.push(dateToKey(t));c.setMonth(c.getMonth()+1);}}
+    else if(info.type==='nth-weekday'){let c=new Date(s.getFullYear(),s.getMonth(),1);while(c<=e){for(const nth of(info.nths||[])){const d=getNthWeekday(c.getFullYear(),c.getMonth(),info.dow,nth);if(d&&d>=s&&d<=e)out.push(dateToKey(d));}c.setMonth(c.getMonth()+1);}}
+    return [...new Set(out)].sort();
+  }
+  function showRuleChangeConfirm(updates, newInfo, restoreBtn){
+    const gid=editingEvent.groupId;
+    const dates=getGroupDates(gid);
+    const firstDate=dates[0], lastDate=dates[dates.length-1];
+    const ideal=datesFromRule(newInfo, firstDate, lastDate).filter(d=>d>todayKey); // 明日以降のみ
+    const existingFuture=dates.filter(d=>d>todayKey);
+    const addCount=ideal.filter(d=>existingFuture.indexOf(d)===-1).length;
+    const delCount=existingFuture.filter(d=>ideal.indexOf(d)===-1).length;
+    document.getElementById('confirm-title').textContent='繰り返しルールの変更';
+    document.getElementById('confirm-message').textContent='明日以降の予定を新ルールで作り直します（過去と今日はそのまま）。\n作成 '+addCount+'件 / 削除 '+delCount+'件。\n表題・時間・色などの変更は作り直す予定に反映されます。';
+    cbSingle.style.display='none';
+    cbOk.textContent='変更する'; cbOk.style.background='#2563EB';
+    onSingleClick=null;
+    onOkClick=function(){
+      try{
+        // 明日以降の既存を削除
+        for(const d of existingFuture){ (events[d]||[]).slice().forEach(e=>{ if(e.groupId===gid) deleteEvent(d,e.id); }); }
+        // 明日以降を新ルールで作成（内容はupdates）
+        for(const nd of ideal){ addEvent(nd,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:newInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }
+        // グループ全体のルールメタを新ルールに統一（過去・今日も。日付位置は不変）
+        for(const dk of Object.keys(events)){ (events[dk]||[]).forEach(e=>{ if(e.groupId===gid) e.recurrenceInfo=newInfo; }); }
+        saveEvents();
+      }catch(e){ alert('変更エラー: '+e.message); }
+      // selectedDate遷移: 明日以降の先頭→残存最終→現状
+      const rem=getGroupDates(gid);
+      if(rem.indexOf(selectedDate)===-1){ const fut=rem.filter(d=>d>todayKey); selectedDate=fut.length?fut[0]:(rem.length?rem[rem.length-1]:selectedDate); }
+      if(restoreBtn)restoreBtn(); closeModal(); renderDetailPanel(selectedDate); renderAllMonths();
+    };
     confirmDialog.classList.remove('hidden');
   }
 
