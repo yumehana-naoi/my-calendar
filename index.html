@@ -943,7 +943,18 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   let customDates = [];
   let miniCalMonth = new Date();
   let photosData = []; // 写真URL/dataURLの配列（最大10枚）
+  let photoThumbsData = []; // photosDataに対応する軽量サムネイルの並行配列
   const MAX_PHOTOS = 10;
+  // 画像圧縮（見やすさ優先）
+  const IMAGE_MAX_DIMENSION = 1280;      // 長辺の最大px
+  const IMAGE_INITIAL_QUALITY = 0.82;    // 初期JPEG品質
+  const IMAGE_FALLBACK_QUALITY = 0.65;   // 大きすぎる場合のフォールバック品質
+  const IMAGE_RECOMPRESS_THRESHOLD = 500 * 1024; // 再圧縮を発動するdataURL長
+  const IMAGE_THUMB_DIMENSION = 320;     // 一覧用サムネイルの長辺px
+  const IMAGE_THUMB_QUALITY = 0.7;       // サムネイルのJPEG品質
+  // 予定の自動削除
+  const EVENT_RETENTION_MONTHS = 2;      // この月数より前の予定を自動削除
+  const CLEANUP_INTERVAL_DAYS = 7;       // クリーンアップ実行間隔
   let firebaseDb = null;
   let firebaseStorage = null;
   let firebaseUnsubscribe = null;
@@ -997,21 +1008,29 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   function formatDateShort(dk) { const d=new Date(dk+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
   function escapeHtml(text) { const div=document.createElement('div'); div.textContent=text; return div.innerHTML; }
   function getEventPhotos(ev) { return ev.photos||(ev.photo?[ev.photo]:[]); }
+  // 表示用ペア（full=拡大用 / thumb=一覧用。thumb無ければfullにフォールバック）
+  function getEventPhotoPairs(ev){ const fulls=getEventPhotos(ev); const thumbs=Array.isArray(ev.photoThumbs)?ev.photoThumbs:[]; return fulls.map((full,i)=>({full:full, thumb:thumbs[i]||full})); }
+  // 削除用の実在アセット（full全部 + fullと異なる実サムネのみ）
+  function getEventPhotoAssets(ev){ const fulls=getEventPhotos(ev); const thumbs=Array.isArray(ev.photoThumbs)?ev.photoThumbs:[]; const out=[]; fulls.forEach((full,i)=>{ if(full) out.push(full); const t=thumbs[i]; if(t&&t!==full) out.push(t); }); return out; }
   function getNow() { return new Date().toISOString(); }
 
   // ===== 古い予定の自動削除 =====
   function cleanupOldEvents() {
     const last=localStorage.getItem(CLEANUP_KEY); const now=new Date();
-    if(last){if((now-new Date(last))/86400000<7) return;}
-    const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-3); const cutoffKey=dateToKey(cutoff);
-    let changed=false; const keys=Object.keys(events);
+    if(last){if((now-new Date(last))/86400000<CLEANUP_INTERVAL_DAYS) return;}
+    const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-EVENT_RETENTION_MONTHS); const cutoffKey=dateToKey(cutoff);
+    const keys=Object.keys(events);
+    // 保持する予定（cutoff以降）が参照中の写真URLを集計 → 共有写真の誤削除を防ぐ
+    const keptPhotos=new Set();
+    for(let i=0;i<keys.length;i++){ if(keys[i]>=cutoffKey&&events[keys[i]]){ for(let j=0;j<events[keys[i]].length;j++){ getEventPhotos(events[keys[i]][j]).forEach(u=>keptPhotos.add(u)); } } }
+    let changed=false;
     for(let i=0;i<keys.length;i++){
       if(keys[i]<cutoffKey){
-        // 3ヶ月以上前の予定削除時、写真もStorageから確実に削除
+        // 2ヶ月以上前の予定削除時、写真もStorageから削除（保持予定が参照中の写真は残す）
         if(events[keys[i]]){
           for(let j=0;j<events[keys[i]].length;j++){
             const ep=getEventPhotos(events[keys[i]][j]);
-            for(let pi=0;pi<ep.length;pi++) deletePhoto(ep[pi]);
+            for(let pi=0;pi<ep.length;pi++){ if(!keptPhotos.has(ep[pi])) deletePhoto(ep[pi]); }
           }
         }
         delete events[keys[i]]; changed=true;
@@ -1028,17 +1047,22 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       reader.onload=function(e){
         const img=new Image();
         img.onload=function(){
-          // 転送量節約: 最大800px、品質0.6で圧縮
-          const maxW=800; let w=img.width,h=img.height;
-          if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
-          const canvas=document.createElement('canvas');
-          canvas.width=w; canvas.height=h;
-          const ctx=canvas.getContext('2d');
-          ctx.drawImage(img,0,0,w,h);
-          let result=canvas.toDataURL('image/jpeg',0.6);
-          // 100KB超えたらさらに圧縮
-          if(result.length>100*1024){result=canvas.toDataURL('image/jpeg',0.4);}
-          resolve(result);
+          // 指定の長辺・品質でJPEGエンコード（長辺で制限し縦長もつぶれない）
+          function encode(maxDim,q){
+            let w=img.width,h=img.height;
+            if(w>=h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
+            else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+            const canvas=document.createElement('canvas');
+            canvas.width=w; canvas.height=h;
+            canvas.getContext('2d').drawImage(img,0,0,w,h);
+            return canvas.toDataURL('image/jpeg',q);
+          }
+          // フル画像（見やすさ優先）: 大きすぎる場合のみ一段下げる
+          let full=encode(IMAGE_MAX_DIMENSION,IMAGE_INITIAL_QUALITY);
+          if(full.length>IMAGE_RECOMPRESS_THRESHOLD) full=encode(IMAGE_MAX_DIMENSION,IMAGE_FALLBACK_QUALITY);
+          // 一覧用の軽量サムネイル
+          const thumb=encode(IMAGE_THUMB_DIMENSION,IMAGE_THUMB_QUALITY);
+          resolve({full:full, thumb:thumb});
         };
         img.onerror=function(){reject(new Error('画像の読み込みに失敗しました'));};
         img.src=e.target.result;
@@ -1106,11 +1130,11 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       const wrap=document.createElement('div');
       wrap.className='photo-preview-item';
       const img=document.createElement('img');
-      img.src=photosData[i];
+      img.src=photoThumbsData[i]||photosData[i];
       const btn=document.createElement('button');
       btn.type='button'; btn.className='photo-remove-btn'; btn.textContent='✕';
       btn.setAttribute('data-photo-index',i);
-      btn.addEventListener('click',function(){ photosData.splice(+this.getAttribute('data-photo-index'),1); renderPhotoPreviews(); updatePhotoCount(); });
+      btn.addEventListener('click',function(){ const idx=+this.getAttribute('data-photo-index'); photosData.splice(idx,1); photoThumbsData.splice(idx,1); renderPhotoPreviews(); updatePhotoCount(); });
       wrap.appendChild(img); wrap.appendChild(btn);
       grid.appendChild(wrap);
     }
@@ -1599,8 +1623,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
         html+='<div class="detail-event-title">'+escapeHtml(ev.title||'（無題）')+'</div>';
         if(ev.detail){html+='<div class="detail-event-detail">'+escapeHtml(ev.detail)+'</div>';}
-        var evPhotos=getEventPhotos(ev);
-        if(evPhotos.length>0){html+='<div class="detail-photos-wrap">';for(var pi=0;pi<evPhotos.length;pi++){html+='<img class="detail-event-photo" src="'+evPhotos[pi]+'" data-action="show-photo">';}html+='</div>';}
+        var evPairs=getEventPhotoPairs(ev);
+        if(evPairs.length>0){html+='<div class="detail-photos-wrap">';for(var pi=0;pi<evPairs.length;pi++){html+='<img class="detail-event-photo" src="'+evPairs[pi].thumb+'" data-full="'+evPairs[pi].full+'" loading="lazy" decoding="async" data-action="show-photo">';}html+='</div>';}
         html+='<div class="detail-event-actions">'
           +'<button class="done-btn" data-id="'+ev.id+'" data-action="toggle-done">✅ 済</button>'
           +'<button class="edit-btn" data-id="'+ev.id+'">✏️ 編集</button>'
@@ -1637,8 +1661,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       else{html+='<div class="detail-event-time" style="color:#AAAAAA">時間未設定</div>';}
       html+=`<div class="detail-event-title">${escapeHtml(ev.title||'（無題）')}</div>`;
       if(ev.detail){html+=`<div class="detail-event-detail">${escapeHtml(ev.detail)}</div>`;}
-      const evPhotos=getEventPhotos(ev);
-      if(evPhotos.length>0){html+='<div class="detail-photos-wrap">';for(let pi=0;pi<evPhotos.length;pi++){html+=`<img class="detail-event-photo" src="${evPhotos[pi]}" data-action="show-photo">`;}html+='</div>';}
+      const evPairs=getEventPhotoPairs(ev);
+      if(evPairs.length>0){html+='<div class="detail-photos-wrap">';for(let pi=0;pi<evPairs.length;pi++){html+=`<img class="detail-event-photo" src="${evPairs[pi].thumb}" data-full="${evPairs[pi].full}" loading="lazy" decoding="async" data-action="show-photo">`;}html+='</div>';}
       // ボタン
       const doneLabel=ev.done?'↩ 戻す':'✅ 済';
       const doneClass=ev.done?'undone-btn':'done-btn';
@@ -1747,7 +1771,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('edit-date-group').style.display='none';
     customDates=[]; renderSelectedDatesChips();
     resetColorPicker(0); resetRecurrenceUI(); setDefaultEndDates();
-    photosData=[]; renderPhotoPreviews(); updatePhotoCount();
+    photosData=[]; photoThumbsData=[]; renderPhotoPreviews(); updatePhotoCount();
     document.getElementById('recurrence-group').style.display='';
     document.getElementById('extend-end-group').style.display='none';
     document.getElementById('event-modal').classList.remove('hidden');
@@ -1763,7 +1787,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     document.getElementById('event-title').value=ev.title||'';
     document.getElementById('event-detail').value=ev.detail||'';
     resetColorPicker(ev.colorIndex);
-    photosData=getEventPhotos(ev).slice(); renderPhotoPreviews(); updatePhotoCount();
+    photosData=getEventPhotos(ev).slice(); photoThumbsData=getEventPhotos(ev).map((_,i)=>(ev.photoThumbs&&ev.photoThumbs[i])||''); renderPhotoPreviews(); updatePhotoCount();
     document.getElementById('recurrence-type').value='none';
     resetRecurrenceUI();
     // 繰り返し
@@ -1810,7 +1834,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const toProcess=files.slice(0,remaining);
     if(files.length>remaining) alert('上限のため'+toProcess.length+'枚のみ追加します。');
     for(let i=0;i<toProcess.length;i++){
-      try{const compressed=await compressImage(toProcess[i]);photosData.push(compressed);}
+      try{const r=await compressImage(toProcess[i]);photosData.push(r.full);photoThumbsData.push(r.thumb);}
       catch(err){alert(toProcess[i].name+': '+err.message);}
     }
     renderPhotoPreviews(); updatePhotoCount();
@@ -1953,8 +1977,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
       var p=e.target.closest('[data-action="show-photo"]');
       if(p){
         var wrap=p.closest('.detail-photos-wrap');
-        var siblings=wrap?Array.from(wrap.querySelectorAll('[data-action="show-photo"]')).map(function(img){return img.src;}):[];
-        openLightbox(p.src, siblings);
+        var siblings=wrap?Array.from(wrap.querySelectorAll('[data-action="show-photo"]')).map(function(img){return img.dataset.full||img.src;}):[];
+        openLightbox(p.dataset.full||p.src, siblings);
       }
     });
 
@@ -2151,15 +2175,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     const tags=getSelectedTags();
     const recurrenceType=document.getElementById('recurrence-type').value;
 
-    // 写真アップロード（Firebase Storage対応・複数枚）
-    const photos=[];
+    // 写真アップロード（full + 軽量サムネ。fullを正とし、full失敗の写真は破棄／thumb失敗はfullにフォールバック）
+    const photos=[]; const photoThumbs=[];
     for(let pi=0;pi<photosData.length;pi++){
-      if(photosData[pi].startsWith('data:')){
-        const url=await uploadPhoto(photosData[pi]);
-        if(url) photos.push(url); // アップロード失敗時はスキップ
-      } else {
-        photos.push(photosData[pi]); // 既にURL
-      }
+      let fullUrl;
+      if(photosData[pi].startsWith('data:')){ fullUrl=await uploadPhoto(photosData[pi]); if(!fullUrl) continue; }
+      else fullUrl=photosData[pi]; // 既にURL
+      let thumbUrl='';
+      const td=photoThumbsData[pi];
+      if(td){ if(td.startsWith('data:')){ const tu=await uploadPhoto(td); thumbUrl=tu||''; } else thumbUrl=td; }
+      photos.push(fullUrl); photoThumbs.push(thumbUrl);
     }
     // 編集時に削除された写真をStorageからも削除
     if(editingEvent){
@@ -2171,7 +2196,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
     if(editingEvent){
       const newDate=document.getElementById('event-date').value;
-      const updates={time,title,detail,colorIndex,photos:photos,tags:tags};
+      const updates={time,title,detail,colorIndex,photos:photos,tags:tags,photoThumbs:photoThumbs};
 
       if(editingEvent.groupId){
         // カスタム群: カレンダーで選んだ日付に追加/削除を反映
@@ -2201,7 +2226,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         if(!dates||dates.length===0) dates=[baseDate];
         deleteEvent(selectedDate, editingEvent.id); // 元の単発を削除
         const groupId=generateId();
-        for(const d of dates){ addEvent(d,{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos:photos.slice(),tags:tags.slice()}); }
+        for(const d of dates){ addEvent(d,{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos:photos.slice(),tags:tags.slice(),photoThumbs:photoThumbs.slice()}); }
         saveEvents(); restoreBtn();
         selectedDate=dates.indexOf(baseDate)!==-1?baseDate:dates[0];
         closeModal();
@@ -2221,12 +2246,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     }
 
     if(recurrenceType==='none'){
-      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags});
+      addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags,photoThumbs});
     } else {
       const result=generateRecurringDates(recurrenceType,selectedDate);
       const dates=result.dates; const recurrenceInfo=result.info;
-      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags});}
-      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos,tags});}}
+      if(dates.length===0){addEvent(selectedDate,{id:generateId(),groupId:null,time,title,detail,colorIndex,photos,tags,photoThumbs});}
+      else{const groupId=generateId();for(let i=0;i<dates.length;i++){addEvent(dates[i],{id:generateId(),groupId,time,title,detail,colorIndex,recurrenceInfo,photos,tags,photoThumbs});}}
     }
     try{saveEvents();}catch(e){console.warn('localStorage保存エラー:',e);}
     restoreBtn(); closeModal();
@@ -2437,12 +2462,12 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     cbOk.style.background='#2563EB';
     function reconcile(scope){
       // 追加日
-      for(const d of added){ addEvent(d,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:recInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }
+      for(const d of added){ addEvent(d,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:recInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice(),photoThumbs:(updates.photoThumbs||[]).slice()}); }
       // 削除日（同日同groupIdは全件）
       for(const d of removed){ (events[d]||[]).slice().forEach(e=>{ if(e.groupId===gid) deleteEvent(d,e.id); }); }
       // 内容反映（photos/tagsはoccurrence毎に複製）
       if(scope==='all'){
-        for(const dk of Object.keys(events)){ (events[dk]||[]).forEach(e=>{ if(e.groupId===gid) Object.assign(e,updates,{photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }); }
+        for(const dk of Object.keys(events)){ (events[dk]||[]).forEach(e=>{ if(e.groupId===gid) Object.assign(e,updates,{photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice(),photoThumbs:(updates.photoThumbs||[]).slice()}); }); }
       } else {
         updateEvent(selectedDate,editingEvent.id,updates);
       }
@@ -2502,7 +2527,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
         // 明日以降の既存を削除
         for(const d of existingFuture){ (events[d]||[]).slice().forEach(e=>{ if(e.groupId===gid) deleteEvent(d,e.id); }); }
         // 明日以降を新ルールで作成（内容はupdates）
-        for(const nd of ideal){ addEvent(nd,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:newInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice()}); }
+        for(const nd of ideal){ addEvent(nd,{id:generateId(),groupId:gid,time:updates.time,title:updates.title,detail:updates.detail,colorIndex:updates.colorIndex,recurrenceInfo:newInfo,photos:(updates.photos||[]).slice(),tags:(updates.tags||[]).slice(),photoThumbs:(updates.photoThumbs||[]).slice()}); }
         // グループ全体のルールメタを新ルールに統一（過去・今日も。日付位置は不変）
         for(const dk of Object.keys(events)){ (events[dk]||[]).forEach(e=>{ if(e.groupId===gid) e.recurrenceInfo=newInfo; }); }
         saveEvents();
